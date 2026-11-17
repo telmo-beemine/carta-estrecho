@@ -1,0 +1,14 @@
+# Local files and exported copies
+.DS_Store
+*.zip
+/carta-estrecho-web/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.codex/
+.agents/
+.aws/
+.openai/
+node_modules/

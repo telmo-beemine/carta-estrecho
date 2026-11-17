@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carta del Estrecho PY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../theme.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-tema="color">
+<header>
+  <a class="brand" href="../index.html" title="Volver al inicio"><b>Carta del <i>Estrecho</i></b><span>← Inicio · práctica de Patrón de Yate</span></a>
+  <div class="readout" id="readout" aria-live="off"><i>l</i>—&nbsp;&nbsp;<i>L</i>—</div>
+  <button class="chip rank" id="chipRank" title="Tu rango en la travesía"></button>
+  <div class="conds" id="conds" role="group" aria-label="Condiciones de navegación">
+    <button class="chip" id="chipCt" data-pop="ct" title="Corrección total de la aguja"></button>
+    <button class="chip" id="chipW" data-pop="viento" title="Viento y abatimiento"></button>
+    <button class="chip" id="chipC" data-pop="corriente" title="Corriente"></button>
+  </div>
+  <div class="hbtns">
+    <div class="seg" id="tema" role="group" aria-label="Aspecto de la carta">
+      <button data-tema="color" aria-pressed="true">Color</button><button data-tema="papel" aria-pressed="false">Papel</button><button data-tema="noche" aria-pressed="false">Noche</button>
+    </div>
+    <button id="togglePanel" title="Mostrar u ocultar el cuaderno">Cuaderno</button>
+  </div>
+</header>
+<div class="pop glass" id="pop" role="dialog" aria-label="Condiciones de navegación" hidden>
+  <div class="pophead"><b>Condiciones</b><button class="x" id="popX" aria-label="Cerrar">×</button></div>
+  <section id="sec-ct">
+    <h4>Corrección total</h4>
+    <div class="ctgrid">
+      <svg id="ctDia" viewBox="0 0 150 132" role="img" aria-label="Esquema de los nortes verdadero, magnético y de aguja"></svg>
+      <div><div class="ctsum" id="ctSum"></div>
+        <p class="hint">Este (E) suma y abre a la derecha. Oeste (W) resta y abre a la izquierda. Esquema sin escala.</p></div>
+    </div>
+    <h4>Convertir un rumbo o una demora</h4>
+    <div class="conv"><label>De aguja<input id="cvA" inputmode="decimal" placeholder="Ra · Da"></label><span class="mid" id="cvMid"></span><label>Verdadero<input id="cvV" inputmode="decimal" placeholder="Rv · Dv"></label></div>
+    <p class="hint">En la carta se traza siempre el verdadero. Lo de aguja se convierte antes de trazar; lo medido en la carta, antes de dárselo al timonel.</p>
+    <h4>De dónde sale la Ct</h4>
+    <div class="row"><span class="way">1</span><label for="dmVal">dm</label><input class="n s" id="dmVal" inputmode="decimal" value="0"><select id="dmSig" aria-label="Signo de la declinación"><option value="-1">W</option><option value="1">E</option></select>
+      <label for="dvVal">+ desvío</label><input class="n s" id="dvVal" inputmode="decimal" value="0"><select id="dvSig" aria-label="Signo del desvío"><option value="-1">W</option><option value="1">E</option></select></div>
+    <div class="row" style="margin-left:23px"><label for="dmYear">dm de la carta en</label><input class="n s" id="dmYear" inputmode="numeric" value="2026"><button class="btn alt" id="dmUse">Usar</button><span class="hint" id="dmRes" style="margin:0"></span></div>
+    <div class="row"><span class="way">2</span><label for="enDv">Enfilación: Dv en la carta</label><input class="n s" id="enDv" inputmode="decimal"><label for="enDa">− Da</label><input class="n s" id="enDa" inputmode="decimal"><span class="cv" id="enCt"></span><button class="btn alt" id="enUse">Usar</button></div>
+    <div class="row"><span class="way">3</span><label for="poZa">Polar: Za</label><input class="n s" id="poZa" inputmode="decimal"><span class="cv" id="poCt"></span><button class="btn alt" id="poUse">Usar</button></div>
+    <p class="hint">La Ct elegida se aplica a todo lo que escribas como Ra o Da y al barco.</p>
+  </section>
+  <section id="sec-viento">
+    <h4>Viento</h4>
+    <div class="row"><label for="wDir">Viene del</label><select id="wDir"><option value="">Calma</option><option value="N">N</option><option value="NE">NE</option><option value="E">E (levante)</option><option value="SE">SE</option><option value="S">S</option><option value="SW">SW</option><option value="W">W (poniente)</option><option value="NW">NW</option></select>
+      <label for="wAb">abate</label><input class="n s" id="wAb" inputmode="decimal" value="5"><label>°</label></div>
+    <p class="hint">Si entra por estribor abate a babor (−); por babor, a estribor (+). Rs = Rv + abatimiento.</p>
+  </section>
+  <section id="sec-corriente">
+    <h4>Corriente</h4>
+    <div class="row"><label for="cRc">Rc</label><input class="n s" id="cRc" inputmode="decimal" value="090"><label>°</label>
+      <label for="cIh">Ihc</label><input class="n s" id="cIh" inputmode="decimal" value="1"><label>kn · 0 = sin corriente</label></div>
+    <p class="hint">Rc es hacia dónde va el agua. La verás fluir sobre la mar.</p>
+  </section>
+</div>
+<main>
+  <nav class="rail" id="rail" aria-label="Útiles de dibujo">
+    <button data-tool="mover" title="Mover la carta y seleccionar trazados"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>Mover<kbd>V</kbd></button>
+    <button data-tool="punto" title="Situar un punto"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path d="M12 2v6M12 16v6M2 12h6M16 12h6"/></svg>Punto<kbd>P</kbd></button>
+    <button data-tool="rumbo" title="Rumbo y distancia entre dos puntos, o vector desde un punto"><svg viewBox="0 0 24 24"><path d="M4 20L20 4M20 4h-7M20 4v7"/></svg>Rumbo<kbd>R</kbd></button>
+    <button data-tool="demora" title="Demora a un faro"><svg viewBox="0 0 24 24"><circle cx="17" cy="6" r="3"/><path d="M15 8L3 21"/><path d="M17 1v1.5M22 6h-1.5"/></svg>Demora<kbd>D</kbd></button>
+    <button data-tool="enfil" title="Enfilación u oposición de dos puntos"><svg viewBox="0 0 24 24"><path d="M2 20L22 4"/><circle cx="8" cy="15.2" r="2.3"/><circle cx="16" cy="8.8" r="2.3"/></svg>Enfilación<kbd>E</kbd></button>
+    <button data-tool="circ" title="Círculo de distancia (compás)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 12l6.4-6.4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>Distancia<kbd>C</kbd></button>
+    <button data-tool="paralela" title="Paralela a una línea por un punto (traslado de demora)"><svg viewBox="0 0 24 24"><path d="M3 17L15 5M9 20L21 8"/></svg>Paralela<kbd>L</kbd></button>
+    <button data-tool="barco" title="Barco: navega con rumbo, velocidad, viento y corriente"><svg viewBox="0 0 24 24"><path d="M3 15h18l-2.5 5h-13z"/><path d="M12 15V3l6 9h-6"/></svg>Barco<kbd>B</kbd></button>
+    <button data-tool="borrar" title="Borrar un trazado"><svg viewBox="0 0 24 24"><path d="M5 20h14M7 16l8-10 5 4-8 10H8z"/></svg>Borrar<kbd>X</kbd></button>
+    <hr>
+    <button id="undo" title="Deshacer (Ctrl+Z)"><svg viewBox="0 0 24 24"><path d="M8 5L3 10l5 5"/><path d="M3 10h11a6 6 0 010 12h-3"/></svg>Deshacer</button>
+    <button id="clear" title="Borrar todos los trazados"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Limpiar</button>
+  </nav>
+
+  <div id="stage">
+    <div id="map">
+      <img id="base" src="base_dia.jpg" alt="" draggable="false">
+      <img id="baseN" alt="" draggable="false">
+      <img id="ink" src="tinta.jpg" alt="Carta L105 del Estrecho de Gibraltar" draggable="false">
+    </div>
+    <canvas id="ov"></canvas>
+    <section class="strip glass" id="strip" aria-live="polite" hidden></section>
+    <section class="boatbar glass" id="boatbar" aria-label="Barco" hidden></section>
+    <div class="zoomctl glass" role="group" aria-label="Zoom"><button id="zIn" title="Acercar" aria-label="Acercar">+</button><button id="zOut" title="Alejar" aria-label="Alejar">−</button><button id="zFit" title="Ver la carta entera" aria-label="Ver la carta entera"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button></div>
+    <section class="gbar glass" id="gbar" aria-live="polite" hidden></section>
+    <div class="hud num" id="hud"></div>
+  </div>
+
+  <aside id="panel">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="trazados" aria-selected="false">Trazados</button>
+      <button role="tab" data-tab="calculos" aria-selected="false">Cálculos</button>
+      <button role="tab" data-tab="ejercicios" aria-selected="true">Ejercicios</button>
+    </div>
+    <div class="pane" id="pane-trazados" hidden></div>
+    <div class="pane" id="pane-calculos" hidden>
+      <div class="calc">
+        <h4>Escalera de rumbos</h4>
+        <div class="lad">
+          <div class="rung"><label for="ldA">Ra</label><input id="ldA" inputmode="decimal" value="140"><span>de aguja: lo que marca el compás</span></div>
+          <div class="op" id="ldOp1"></div>
+          <div class="rung"><label for="ldV">Rv</label><input id="ldV" inputmode="decimal"><span>verdadero</span></div>
+          <div class="op" id="ldOp2"></div>
+          <div class="rung"><label for="ldS">Rs</label><input id="ldS" inputmode="decimal"><span>de superficie: el que se traza con viento</span></div>
+        </div>
+        <div class="row"><label for="rbAb">Abatimiento</label><input class="n s" id="rbAb" inputmode="decimal" value="0"><select id="rbAbS" aria-label="Banda del abatimiento"><option value="1">a estribor (+)</option><option value="-1">a babor (−)</option></select></div>
+        <div class="hint">Escribe en cualquier peldaño y salen los otros. Bajando se suma con su signo; subiendo se resta. Usa la Ct de Condiciones. Con corriente, el triángulo de abajo da el Ref.</div>
+        <details class="glos"><summary>Qué significa cada sigla</summary><dl>
+          <dt>Ra · Da</dt><dd>Rumbo y demora de aguja: lo que se lee en el compás.</dd>
+          <dt>Rv · Dv</dt><dd>Rumbo y demora verdaderos: lo que se traza y se mide en la carta.</dd>
+          <dt>dm</dt><dd>Declinación magnética: la da la rosa de la carta y cambia cada año.</dd>
+          <dt>Δ</dt><dd>Desvío: error propio del compás del barco a cada rumbo.</dd>
+          <dt>Ct</dt><dd>Corrección total = dm + Δ. Verdadero = aguja + Ct.</dd>
+          <dt>Rs</dt><dd>Rumbo de superficie = Rv + abatimiento por el viento.</dd>
+          <dt>Ref</dt><dd>Rumbo efectivo: el que se sigue sobre el fondo con corriente.</dd>
+          <dt>M</dt><dd>Marcación: ángulo desde la proa. Dv = Rv ± M (Er +, Br −).</dd>
+        </dl></details>
+      </div>
+      <div class="calc">
+        <h4>Velocidad, tiempo y distancia</h4>
+        <div class="row"><label for="vtdV">V</label><input class="n" id="vtdV" inputmode="decimal" value="8"><label>kn</label>
+          <label for="vtdT">t</label><input class="n" id="vtdT" inputmode="decimal" value="45"><label>min</label>
+          <label for="vtdD">D</label><input class="n" id="vtdD" inputmode="decimal" value=""><label>M</label></div>
+        <div class="res" id="vtdRes"></div>
+        <div class="hint">Deja en blanco el dato que quieres calcular.</div>
+      </div>
+      <div class="calc">
+        <h4>Triángulo de corrientes</h4>
+        <div class="row"><select id="trMode" aria-label="Qué se quiere calcular">
+          <option value="a">Hallar rumbo y velocidad efectivos</option>
+          <option value="b">Hallar el rumbo a gobernar</option>
+          <option value="c">Hallar rumbo y velocidad para llegar a una hora</option>
+          <option value="d">Hallar la corriente</option></select></div>
+        <div id="trIn"></div>
+        <div class="res" id="trRes"></div>
+        <div class="row"><button class="btn alt" id="trDraw">Trazar desde el punto seleccionado</button></div>
+        <div class="hint">Rc e Ihc se rellenan con la corriente de Condiciones. Rumbos verdaderos (o de superficie si hay viento); el triángulo se traza para una hora.</div>
+      </div>
+      <div class="calc">
+        <h4>Estima analítica (loxodrómica)</h4>
+        <div class="row"><label>Salida l</label><input class="n s" id="lxLaD" inputmode="numeric" value="36" aria-label="Grados de latitud de salida"><label>°</label><input class="n s" id="lxLaM" inputmode="decimal" value="00,0" aria-label="Minutos de latitud de salida"><select id="lxLaS" aria-label="Hemisferio"><option value="1">N</option><option value="-1">S</option></select>
+          <label>L</label><input class="n s" id="lxLoD" inputmode="numeric" value="006" aria-label="Grados de longitud de salida"><label>°</label><input class="n s" id="lxLoM" inputmode="decimal" value="20,0" aria-label="Minutos de longitud de salida"><select id="lxLoS" aria-label="Este u oeste"><option value="-1">W</option><option value="1">E</option></select></div>
+        <div class="row"><label for="lxR">Rumbo</label><input class="n s" id="lxR" inputmode="decimal" value="293"><label>° Distancia</label><input class="n s" id="lxD" inputmode="decimal" value="45"><label>M</label></div>
+        <div class="res" id="lxRes"></div>
+        <div class="hint">Δl = D·cos R · A = D·sen R · ΔL = A / cos lm.</div>
+      </div>
+    </div>
+    <div class="pane" id="pane-ejercicios">
+      <div class="learning-tabs" role="tablist" aria-label="Tipo de aprendizaje">
+        <button id="learn-tab-misiones" role="tab" data-learning="misiones" aria-controls="learn-misiones" aria-selected="true">Misiones <span>13</span></button>
+        <button id="learn-tab-practica" role="tab" data-learning="practica" aria-controls="learn-practica" aria-selected="false" tabindex="-1">Exámenes y práctica</button>
+      </div>
+      <section id="learn-misiones" class="learning-section" role="tabpanel" aria-labelledby="learn-tab-misiones">
+        <div class="learning-intro">
+          <h2>Aprende paso a paso</h2>
+          <p>Un recorrido de 13 misiones, de la corrección total a las corrientes. Te guiamos y comprobamos cada paso sobre la carta.</p>
+        </div>
+        <div id="missionBox"></div>
+        <div id="quest"></div>
+      </section>
+      <section id="learn-practica" class="learning-section" role="tabpanel" aria-labelledby="learn-tab-practica" hidden>
+        <div class="learning-intro">
+          <h2>Entrena a tu ritmo</h2>
+          <p>Resuelve preguntas oficiales o elige un tema para practicar por tu cuenta. La ayuda y las soluciones están disponibles cuando las necesites.</p>
+        </div>
+        <div class="practice-modes" role="group" aria-label="Modalidad de práctica">
+          <button data-practice="examen" aria-pressed="true">Exámenes oficiales</button>
+          <button data-practice="libre" aria-pressed="false">Práctica libre</button>
+        </div>
+        <div class="exercise-picker">
+          <div id="examFields" class="picker-field">
+            <label for="examSel">Convocatoria</label>
+            <select id="examSel"></select>
+            <p class="hint">Bloque de carta: 10 preguntas con cuatro opciones. Sin cronómetro y con corrección al responder.</p>
+          </div>
+          <div id="practiceFields" class="picker-field" hidden>
+            <label for="exSel">Qué quieres practicar</label>
+            <select id="exSel" aria-describedby="practiceHint"></select>
+            <p class="hint" id="practiceHint"></p>
+          </div>
+          <button class="btn" id="exLoad">Empezar examen</button>
+        </div>
+        <p id="practiceEmpty" class="learning-empty">Elige una convocatoria y pulsa «Empezar examen». Tus respuestas se guardan en este navegador.</p>
+        <div id="exBox" tabindex="-1" aria-label="Actividad de práctica" hidden></div>
+      </section>
+    </div>
+    <div class="foot">Carta de enseñanza, no válida para la navegación. Situaciones referidas a la carta (datum europeo). Tolerancia al comprobar: 0,3' · 2° · 0,3 M.</div>
+  </aside>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const rad=d=>d*Math.PI/180, deg=r=>r*180/Math.PI, norm=a=>((a%360)+360)%360, n180=a=>{a=norm(a);return a>180?a-360:a};
+const num=s=>{const v=parseFloat(String(s).replace(',','.').replace('−','-'));return isFinite(v)?v:NaN};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* Keep canvas controls in sync with the CSS theme without reading styles every frame. */
+const UI={};
+function syncAppearance(){
+  const style=getComputedStyle(document.body);
+  for(const key of ['bg','panel','rule','rule-hover','text','muted','accent','on-accent','f-ui','f-mono']){
+    UI[key]=style.getPropertyValue('--'+key).trim();
+  }
+}
+syncAppearance();
+
+/* ---------- Georreferenciación de la imagen (retícula de 10' medida sobre el escaneo) ---------- */
+const psi=lat=>Math.log(Math.tan(Math.PI/4+lat*Math.PI/360))*10800/Math.PI;
+const ipsi=n=>(2*Math.atan(Math.exp(n*Math.PI/10800))-Math.PI/2)*180/Math.PI;
+const LONS=[-380,-370,-360,-350,-340,-330,-320,-310];
+const G={
+ U:{rows:[80,70,60],px:[
+  [[327.54,226.72],[950.47,225.5],[1573.84,224.53],[2194.75,222.31],[2818.25,220.83],[3439.22,219.55],[4060.61,219.23],[4683.77,219.74]],
+  [[327.59,992.92],[950.6,991.78],[1574.19,990.03],[2197.45,989.5],[2817.75,988.83],[3438.97,987.48],[4060.34,986.9],[4683.37,986.91]],
+  [[327.63,1758.58],[950.73,1758.04],[1574.55,1754.32],[2200.16,1754.87],[2817.25,1753.78],[3438.71,1754.02],[4060.08,1754.37],[4682.96,1754.5]]]},
+ L:{rows:[60,50,40],px:[
+  [[327.67,1758.58],[950.87,1758.04],[1574.6,1754.32],[2199.54,1754.87],[2809.99,1754.0],[3434.84,1754.02],[4058.52,1754.37],[4681.43,1754.5]],
+  [[327.58,2521.61],[950.51,2520.09],[1574.0,2518.96],[2198.5,2517.58],[2808.93,2516.31],[3433.45,2516.78],[4056.8,2517.26],[4679.51,2517.61]],
+  [[327.5,3281.69],[950.15,3281.22],[1573.41,3279.9],[2197.45,3278.19],[2807.87,3278.09],[3432.06,3278.46],[4055.09,3279.03],[4677.59,3279.66]]]}
+};
+const NP={};[80,70,60,50,40].forEach(m=>NP[m]=psi(35+m/60));
+function plane2px(p){
+  const h=p.n>=NP[60]?G.U:G.L, j=p.n>=NP[h.rows[1]]?0:1, i=Math.min(6,Math.max(0,Math.floor((p.e+380)/10)));
+  const u=(p.e-LONS[i])/10, nt=NP[h.rows[j]], nb=NP[h.rows[j+1]], v=(nt-p.n)/(nt-nb);
+  const a=h.px[j][i],b=h.px[j][i+1],c=h.px[j+1][i],d=h.px[j+1][i+1];
+  return [(1-u)*(1-v)*a[0]+u*(1-v)*b[0]+(1-u)*v*c[0]+u*v*d[0],(1-u)*(1-v)*a[1]+u*(1-v)*b[1]+(1-u)*v*c[1]+u*v*d[1]];
+}
+function px2plane(x,y){
+  let e=-380+(x-327.5)/62.23, n=NP[80]-(y-222)/61.9;
+  for(let k=0;k<25;k++){
+    const [px,py]=plane2px({e,n}), h=0.01, [ax,ay]=plane2px({e:e+h,n}), [bx,by]=plane2px({e,n:n+h});
+    const j11=(ax-px)/h,j21=(ay-py)/h,j12=(bx-px)/h,j22=(by-py)/h, det=j11*j22-j12*j21, dx=x-px, dy=y-py;
+    const de=(j22*dx-j12*dy)/det, dn=(-j21*dx+j11*dy)/det; e+=de; n+=dn;
+    if(Math.abs(de)+Math.abs(dn)<1e-7)break;
+  }
+  return {e,n};
+}
+
+/* ---------- Navegación loxodrómica sobre el plano Mercator ---------- */
+const latOf=p=>ipsi(p.n), lonOf=p=>p.e/60;
+const PL=(lat,lon)=>({e:lon*60,n:psi(lat)});
+const brg=(a,b)=>norm(deg(Math.atan2(b.e-a.e,b.n-a.n)));
+function dist(a,b){const la=latOf(a),lb=latOf(b),c=Math.atan2(b.e-a.e,b.n-a.n);
+  if(Math.abs(Math.cos(c))>0.02)return Math.abs((lb-la)*60/Math.cos(c));
+  return Math.abs(b.e-a.e)*Math.cos(rad((la+lb)/2));}
+function dest(a,course,d){const c=rad(course),la=latOf(a),lb=la+d*Math.cos(c)/60,n=psi(lb);
+  const e=Math.abs(Math.cos(c))>1e-6?a.e+(n-a.n)*Math.tan(c):a.e+d*Math.sin(c)/Math.cos(rad(la));
+  return {e,n};}
+const uv=c=>({e:Math.sin(rad(c)),n:Math.cos(rad(c))});
+const roundPos=p=>PL(Math.round(latOf(p)*600)/600,Math.round(lonOf(p)*600)/600);
+const inChart=p=>p.e>=-380&&p.e<=-310&&p.n>=NP[40]&&p.n<=NP[80];
+
+/* ---------- Formatos ---------- */
+const nf=(v,d=1)=>v.toFixed(d).replace('.',',').replace('-','−');
+function f3(v,d=0){let s=norm(v).toFixed(d);if(parseFloat(s)>=360)s=(0).toFixed(d);const [i,f]=s.split('.');return i.padStart(3,'0')+(f?','+f:'')+'°';}
+const fA=v=>f3(v,Math.abs(v-Math.round(v))>1e-6?1:0);
+function dm_(x,d,pad){const h=Math.abs(x);let g=Math.floor(h+1e-9),m=(h-g)*60;if(+m.toFixed(d)>=60){g++;m=0}
+  return String(g).padStart(pad,'0')+'° '+m.toFixed(d).padStart(d+3,'0').replace('.',',')+"'";}
+const fLat=(lat,d=1)=>dm_(lat,d,2)+(lat>=0?' N':' S');
+const fLon=(lon,d=1)=>dm_(lon,d,3)+(lon<0?' W':' E');
+const fPos=(p,d=1)=>'l = '+fLat(latOf(p),d)+' · L = '+fLon(lonOf(p),d);
+const isI=v=>Math.abs(v-Math.round(v))<1e-6;
+const fEW=v=>v===0?'0°':nf(Math.abs(v),isI(v)?0:1)+'° '+(v<0?'W':'E');
+const sg=(v,d)=>{if(d==null)d=isI(v)?0:1;return (v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(d).replace('.',',');};
+const hm=min=>{min=Math.round(min);return (min>=60?Math.floor(min/60)+' h ':'')+(min%60)+' min';};
+const hhmm=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');};
+
+/* ---------- Faros: posición del símbolo en la imagen y característica impresa en la carta ---------- */
+const fl=(n,gap,dur)=>{const a=[];for(let i=0;i<n;i++)a.push([i*gap,i*gap+(dur||.55)]);return a;};
+const LMPX={
+ roche:['Cabo Roche',1056,395,'Fl(4)24s 20M',24,fl(4,2.4)],
+ trafalgar:['Cabo Trafalgar',1448.3,912.8,'Fl(2+1)15s 22M',15,[[0,.55],[2.4,2.95],[7.4,7.95]]],
+ barbate:['Barbate (faro)',1866.25,892,'Fl(2)WR 7s 10/7M',7,fl(2,1.8)],
+ barbateR:['Barbate (luz roja)',1858,925,'Fl.R 4s 5M',4,fl(1,1),'r'],
+ gracia:['Punta de Gracia',2293.75,1336.5,'Oc(2)5s 13M',5,[[.8,2.1],[2.9,5]]],
+ paloma:['Punta Paloma',2623.5,1452.5,'Oc.WR 5s 10/7M',5,[[1.2,5]]],
+ tarifa:['Isla de Tarifa',3028.5,1744.5,'Fl(3)WR 10s 26/18M',10,fl(3,2)],
+ carnero:['Punta Carnero',3718,1395,'Fl(4)WR 20s 16/13M',20,fl(4,2.4)],
+ europa:['Punta Europa',4022,1246.75,'Iso 10s 19M',10,[[0,5]]],
+ almina:['Punta Almina',4260.75,2213.25,'Fl(2)10s 22M',10,fl(2,2.4)],
+ cires:['Punta Cires',3506,2166,'Fl(3)10s 18M',10,fl(3,2)],
+ alcazar:['Punta Alcázar',3210,2442.5,'Fl(4)12s 8M',12,fl(4,1.7)],
+ malabata:['Punta Malabata',2509.25,2582.75,'Fl 5s 22M',5,fl(1,1)],
+ espartel:['Cabo Espartel',1861.5,2706.75,'Fl(4)20s 30M',20,fl(4,2.4)],
+ tanger:['Tánger (espigón)',2354.5,2707.5,'Fl(3)12s 14M',12,fl(3,2)],
+ carbonera:['Punta Carbonera',4183,623.75,'Oc 4s 14M',4,[[1,4]]],
+ negro:['Cabo Negro',4275.75,3189.5,'Oc 4s 20M',4,[[1,4]]],
+ ceuta:['Ceuta (bocana)',4147.5,2226,'Fl.G 5s 10M',5,fl(1,1),'g']};
+const LM={};Object.entries(LMPX).forEach(([k,[name,x,y,ch,P,on,col]],i)=>LM[k]={key:k,name,ch,P,on,col,ph:i*1.37,g:0,p:px2plane(x,y)});
+const LMS=Object.values(LM);
+const MAIN=['roche','trafalgar','gracia','paloma','tarifa','carnero','europa','almina','cires','alcazar','malabata','espartel'];
+const litNow=(l,t)=>{const tt=(t+l.ph)%l.P;return l.on.some(([a,b])=>tt>=a&&tt<b);};
+
+/* ---------- Estado ---------- */
+const DAY={pt:'#0d1b2a',rv:'#1746d1',ref:'#0d1b2a',rc:'#d9480f',med:'#334e7a',ray:'#b5127f',line:'#b5127f',circ:'#0a7a43',halo:'rgba(255,255,255,.94)',cas:'rgba(255,255,255,.9)',txt:'#0d1b2a',grid:'rgba(13,27,42,.2)',lm:'#b5127f',fill:'rgba(255,255,255,.85)',boat:'#ffffff',glow:1};
+const TH={color:DAY,papel:DAY,noche:{pt:'#ffffff',rv:'#7fb2ff',ref:'#ffffff',rc:'#ff9a57',med:'#b8c7dd',ray:'#ff7ad9',line:'#ff7ad9',circ:'#5fe3a1',halo:'rgba(3,12,22,.92)',cas:'rgba(3,12,22,.75)',txt:'#e9f1f8',grid:'rgba(255,255,255,.16)',lm:'#ff7ad9',fill:'rgba(3,12,22,.8)',boat:'#ffe9a8',glow:2.2}};
+const S={tool:'mover',pend:[],objs:[],sel:null,view:{k:.2,tx:0,ty:0},dm:0,dv:0,snap:null,cur:null,undo:[],nid:1,ex:null,tema:'color',exam:{},guide:null,fx:[],game:{xp:0,st:{},open:false},
+ cond:{w:'',ab:5,rc:90,ih:1},opt:{},stripMin:false,pickDest:false,
+ simPar:{bC:'090',bCT:'v',bV:'8',bH:'10:00',bX:'120',bFollow:false,bBlind:false}};
+let T=DAY;
+const Ct=()=>S.ctx?S.ctx.ct:S.dm+S.dv;
+const TMAX=160;
+const stage=$('#stage'),mapEl=$('#map'),cv=$('#ov'),ctx=cv.getContext('2d');
+let SW=0,SH=0,DPR=1,dirty=true,fitK=.2;
+const draw=()=>{dirty=true;};
+
+function push(){S.undo.push(JSON.stringify(S.objs));if(S.undo.length>60)S.undo.shift();}
+function save(){try{localStorage.setItem('cartaEstrechoPY.v3',JSON.stringify({objs:S.objs,dm:S.dm,dv:S.dv,ctx:S.ctx||null,nid:S.nid,tema:S.tema,exam:S.exam,game:S.game,cond:S.cond,stripMin:S.stripMin,simPar:S.simPar}))}catch(e){}}
+function changed(){save();renderList();draw();guideCheck();}
+function add(o){o.id=S.nid++;S.objs.push(o);return o;}
+const ptName=()=>{const used=new Set(S.objs.filter(o=>o.t==='pt').map(o=>o.label));for(let i=0;i<26;i++){const c=String.fromCharCode(65+i);if(!used.has(c))return c}return 'P'+S.nid;};
+const mkPt=(p,label,x)=>Object.assign({t:'pt',p,label:label||''},x);
+const mkSeg=(a,b,kind,x)=>Object.assign({t:'seg',a,b,kind:kind||'med'},x);
+const mkRay=(p,c,ref,x)=>Object.assign({t:'ray',p,c:norm(c),ref:ref||''},x);
+const mkLine=(p,c,ref,x)=>Object.assign({t:'line',p,c:norm(c),ref:ref||''},x);
+const mkCirc=(c,r,ref,x)=>Object.assign({t:'circ',c,r,ref:ref||''},x);
+
+/* ---------- Geometría ---------- */
+function geom(o){
+  if(o.t==='seg'){const L=Math.hypot(o.b.e-o.a.e,o.b.n-o.a.n)||1e-9;return {k:'lin',p:o.a,d:{e:(o.b.e-o.a.e)/L,n:(o.b.n-o.a.n)/L},t0:0,t1:L};}
+  if(o.t==='ray')return {k:'lin',p:o.p,d:uv(o.c),t0:0,t1:TMAX};
+  if(o.t==='line')return {k:'lin',p:o.p,d:uv(o.c),t0:-TMAX,t1:TMAX};
+  if(o.t==='circ')return {k:'circ',c:o.c,R:o.r/Math.cos(rad(latOf(o.c)))};
+  return null;
+}
+const at=(g,t)=>({e:g.p.e+g.d.e*t,n:g.p.n+g.d.n*t});
+function inter(g1,g2){
+  const out=[],eps=1e-6;
+  if(g1.k==='lin'&&g2.k==='lin'){
+    const det=-g1.d.e*g2.d.n+g2.d.e*g1.d.n; if(Math.abs(det)<1e-9)return out;
+    const re=g2.p.e-g1.p.e,rn=g2.p.n-g1.p.n, t=(-re*g2.d.n+g2.d.e*rn)/det, s=(g1.d.e*rn-g1.d.n*re)/det;
+    if(t>=g1.t0-eps&&t<=g1.t1+eps&&s>=g2.t0-eps&&s<=g2.t1+eps)out.push(at(g1,t));
+  }else if(g1.k==='lin'&&g2.k==='circ'){
+    const fe=g1.p.e-g2.c.e,fn=g1.p.n-g2.c.n,b=fe*g1.d.e+fn*g1.d.n,c=fe*fe+fn*fn-g2.R*g2.R,D=b*b-c;
+    if(D>=0){const q=Math.sqrt(D);[-b-q,-b+q].forEach(t=>{if(t>=g1.t0-eps&&t<=g1.t1+eps)out.push(at(g1,t))});}
+  }else if(g1.k==='circ'&&g2.k==='lin')return inter(g2,g1);
+  else{
+    const de=g2.c.e-g1.c.e,dn=g2.c.n-g1.c.n,d=Math.hypot(de,dn);
+    if(d>1e-9&&d<=g1.R+g2.R&&d>=Math.abs(g1.R-g2.R)){const a=(g1.R*g1.R-g2.R*g2.R+d*d)/(2*d),h=Math.sqrt(Math.max(0,g1.R*g1.R-a*a));
+      const be=g1.c.e+a*de/d,bn=g1.c.n+a*dn/d; out.push({e:be-h*dn/d,n:bn+h*de/d},{e:be+h*dn/d,n:bn-h*de/d});}
+  }
+  return out;
+}
+function nearest(g,m){
+  if(g.k==='lin'){const t=Math.min(g.t1,Math.max(g.t0,(m.e-g.p.e)*g.d.e+(m.n-g.p.n)*g.d.n));return at(g,t);}
+  const d=Math.hypot(m.e-g.c.e,m.n-g.c.n)||1e-9;return {e:g.c.e+g.R*(m.e-g.c.e)/d,n:g.c.n+g.R*(m.n-g.c.n)/d};
+}
+function tangents(a,g){const de=a.e-g.c.e,dn=a.n-g.c.n,d=Math.hypot(de,dn);if(d<=g.R*1.001)return [];
+  const al=Math.acos(g.R/d),b=Math.atan2(dn,de);return [b+al,b-al].map(t=>({e:g.c.e+g.R*Math.cos(t),n:g.c.n+g.R*Math.sin(t)}));}
+const interLL=(p1,c1,p2,c2)=>inter({k:'lin',p:p1,d:uv(c1),t0:-1e4,t1:1e4},{k:'lin',p:p2,d:uv(c2),t0:-1e4,t1:1e4})[0];
+
+/* ---------- Máscara de tierra (para varadas y para generar situaciones en la mar) ---------- */
+let MASK=null;
+(function(){const im=new Image();im.onload=()=>{try{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const x=c.getContext('2d');x.drawImage(im,0,0);MASK={w:c.width,h:c.height,d:x.getImageData(0,0,c.width,c.height).data};}catch(e){MASK=null;}};im.src='tierra.png';})();
+function isLand(p){if(!MASK)return false;const [x,y]=plane2px(p),i=Math.floor(x/8),j=Math.floor(y/8);if(i<0||j<0||i>=MASK.w||j>=MASK.h)return false;return MASK.d[(j*MASK.w+i)*4]>127;}
+
+/* ---------- Vista: límites, inercia y zoom suave ---------- */
+const scrOf=p=>{const [x,y]=plane2px(p);return [x*S.view.k+S.view.tx,y*S.view.k+S.view.ty];};
+const planeAt=(sx,sy)=>px2plane((sx-S.view.tx)/S.view.k,(sy-S.view.ty)/S.view.k);
+function clampView(){const v=S.view,k=v.k,l=v.tx+327*k,r=v.tx+4684*k,t=v.ty+220*k,b=v.ty+3282*k,mx=SW*.5,my=SH*.5;
+  if(r<mx)v.tx+=mx-r;if(l>SW-mx)v.tx-=l-(SW-mx);if(b<my)v.ty+=my-b;if(t>SH-my)v.ty-=t-(SH-my);}
+function applyView(){clampView();mapEl.style.transform=`matrix(${S.view.k},0,0,${S.view.k},${S.view.tx},${S.view.ty})`;draw();}
+function fit(){const x0=327,y0=220,w=4357,h=3062,ml=58,mt=30,m=8;const k=Math.min((SW-ml-m)/w,(SH-mt-m)/h);fitK=k;
+  S.view={k,tx:ml+(SW-ml-m-w*k)/2-x0*k,ty:mt+(SH-mt-m-h*k)/2-y0*k};zt=null;inert=null;applyView();}
+const clampK=k=>Math.min(6,Math.max(fitK*.7,k));
+function zoomAt(sx,sy,f){const k=clampK(S.view.k*f);f=k/S.view.k;S.view.tx=sx-(sx-S.view.tx)*f;S.view.ty=sy-(sy-S.view.ty)*f;S.view.k=k;applyView();}
+let zt=null,inert=null;
+function zoomTo(sx,sy,f){if(RM){zoomAt(sx,sy,f);return;}zt={k:clampK((zt?zt.k:S.view.k)*f),x:sx,y:sy};}
+function resize(){const r=stage.getBoundingClientRect();const first=!SW;SW=r.width;SH=r.height;DPR=window.devicePixelRatio||1;cv.width=Math.round(SW*DPR);cv.height=Math.round(SH*DPR);
+  if(first)fit();else{const x0=327,w=4357,h=3062;fitK=Math.min((SW-66)/w,(SH-38)/h);applyView();updBarH();}}
+
+/* ---------- Imán (snap) ---------- */
+function snapAt(sx,sy){
+  const m=planeAt(sx,sy),sc=62*S.view.k;let best=null;
+  const cons=(p,kind,label,prio)=>{const d=Math.hypot(p.e-m.e,p.n-m.n)*sc;if(d<(prio<2?14:9)){const score=d+prio*7;if(!best||score<best.score)best={p,kind,label,score};}};
+  LMS.forEach(l=>cons(l.p,'faro',l.name,0));
+  const gs=[];
+  S.objs.forEach(o=>{
+    if(o.t==='pt')cons(o.p,'punto',o.label,0);
+    else{gs.push(geom(o));
+      if(o.t==='seg'){cons(o.a,'extremo','',.5);cons(o.b,'extremo','',.5);}
+      if(o.t==='circ')cons(o.c,'centro',o.ref,.5);
+      if(o.t==='ray')cons(o.p,'origen',o.ref,.5);}
+  });
+  for(let i=0;i<gs.length;i++)for(let j=i+1;j<gs.length;j++)inter(gs[i],gs[j]).forEach(p=>cons(p,'corte','',1));
+  if(S.tool==='rumbo'&&S.pend.length===1)S.objs.forEach(o=>{if(o.t==='circ')tangents(S.pend[0].p,geom(o)).forEach(p=>cons(p,'tangente','',1));});
+  gs.forEach(g=>cons(nearest(g,m),'sobre','',2));
+  return best||{p:m,kind:'libre',label:''};
+}
+function pick(sx,sy){
+  const m=planeAt(sx,sy),sc=62*S.view.k;let best=null;
+  S.objs.forEach(o=>{let d;
+    if(o.t==='pt')d=Math.hypot(o.p.e-m.e,o.p.n-m.n)*sc-4;
+    else{const q=nearest(geom(o),m);d=Math.hypot(q.e-m.e,q.n-m.n)*sc;}
+    if(d<10&&(!best||d<best.d))best={o,d};});
+  return best&&best.o;
+}
+
+/* ---------- Dibujo ---------- */
+const RT=24,RL=54;
+function clipT(g){
+  if(g.t1-g.t0<TMAX)return [g.t0,g.t1];
+  let t0=g.t0,t1=g.t1;const B=[[-380,-310,'e'],[NP[40],NP[80],'n']];
+  for(const [lo,hi,ax] of B){const p=g.p[ax],d=g.d[ax];
+    if(Math.abs(d)<1e-12){if(p<lo||p>hi)return null;continue;}
+    let a=(lo-p)/d,b=(hi-p)/d;if(a>b)[a,b]=[b,a];t0=Math.max(t0,a);t1=Math.min(t1,b);if(t0>t1)return null;}
+  return [t0,t1];
+}
+function pathLin(g){const c=clipT(g);if(!c)return false;const n=Math.max(1,Math.ceil((c[1]-c[0])/4));ctx.beginPath();
+  for(let i=0;i<=n;i++){const [x,y]=scrOf(at(g,c[0]+(c[1]-c[0])*i/n));i?ctx.lineTo(x,y):ctx.moveTo(x,y);}return true;}
+function pathCirc(g){ctx.beginPath();for(let i=0;i<=120;i++){const t=i*Math.PI/60,[x,y]=scrOf({e:g.c.e+g.R*Math.sin(t),n:g.c.n+g.R*Math.cos(t)});i?ctx.lineTo(x,y):ctx.moveTo(x,y);}}
+function strk(col,w){ctx.lineJoin='round';ctx.strokeStyle=T.cas;ctx.lineWidth=w+2.6;ctx.stroke();ctx.strokeStyle=col;ctx.lineWidth=w;ctx.stroke();}
+function text(s,x,y,color,align,size){ctx.font='500 '+(size||13)+'px '+UI['f-mono'];ctx.textAlign=align||'left';ctx.textBaseline='middle';ctx.lineJoin='round';
+  ctx.lineWidth=4;ctx.strokeStyle=T.halo;ctx.strokeText(s,x,y);ctx.fillStyle=color;ctx.fillText(s,x,y);}
+const KN={rv:'Rv',ref:'Ref',rc:'Rc',med:''};
+function segLabel(o){const k=KN[o.kind];return (o.ag!=null?'Ra '+fA(o.ag)+' → ':'')+(k?k+' ':'')+f3(brg(o.a,o.b),1)+' · '+nf(dist(o.a,o.b),2)+' M';}
+function objLabel(o){
+  if(o.t==='pt')return o.label;
+  if(o.t==='seg')return segLabel(o);
+  if(o.t==='ray')return (o.ag!=null?'Da '+fA(o.ag)+' → ':'')+'Dv '+fA(o.c+180);
+  if(o.t==='line')return f3(o.c,1)+' / '+f3(o.c+180,1);
+  if(o.t==='circ')return nf(o.r,Math.abs(o.r*10-Math.round(o.r*10))>1e-6?2:1)+' M';
+}
+const colOf=o=>o.t==='seg'?T[o.kind]:T[o.t];
+function drawObj(o,sel){
+  const col=colOf(o),w=sel?3.2:2;ctx.setLineDash(o.dash?[7,5]:[]);
+  if(o.t==='pt'){const [x,y]=scrOf(o.p);ctx.setLineDash([]);ctx.beginPath();ctx.arc(x,y,6,0,7);ctx.fillStyle=T.fill;ctx.fill();strk(col,sel?2.6:1.8);
+    ctx.beginPath();ctx.arc(x,y,1.6,0,7);ctx.fillStyle=col;ctx.fill();if(o.label)text(o.label,x+11,y-11,col);return;}
+  const g=geom(o);
+  if(g.k==='circ'){pathCirc(g);strk(col,w);ctx.setLineDash([]);const [x,y]=scrOf({e:g.c.e,n:g.c.n+g.R});text(objLabel(o),x,y-11,col,'center');
+    const [cx,cy]=scrOf(g.c);ctx.beginPath();ctx.moveTo(cx-4,cy);ctx.lineTo(cx+4,cy);ctx.moveTo(cx,cy-4);ctx.lineTo(cx,cy+4);strk(col,1.4);return;}
+  if(!pathLin(g))return;strk(col,w);ctx.setLineDash([]);
+  if(o.t==='seg'){
+    const [ax,ay]=scrOf(o.a),[bx,by]=scrOf(o.b),L=Math.hypot(bx-ax,by-ay)||1,ux=(bx-ax)/L,uy=(by-ay)/L;
+    const nA={rv:1,ref:2,rc:3,med:0}[o.kind];
+    for(let i=0;i<nA;i++){const t=L/2+(i-(nA-1)/2)*9+4,x=ax+ux*t,y=ay+uy*t;ctx.beginPath();ctx.moveTo(x-ux*10-uy*5,y-uy*10+ux*5);ctx.lineTo(x,y);ctx.lineTo(x-ux*10+uy*5,y-uy*10-ux*5);strk(col,sel?2.6:2);}
+    ctx.fillStyle=col;[[ax,ay],[bx,by]].forEach(([x,y])=>{ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fill();});
+    if(L>46){let px=-uy,py=ux;if(py>0){px=-px;py=-py;}text(objLabel(o),ax+ux*L/2+px*15,ay+uy*L/2+py*15,col,'center');}
+  }else{
+    const u=uv(o.c),[x0,y0]=scrOf(o.p),[x1,y1]=scrOf({e:o.p.e+u.e,n:o.p.n+u.n}),L=Math.hypot(x1-x0,y1-y0)||1,ux=(x1-x0)/L,uy=(y1-y0)/L;
+    let px=-uy,py=ux;if(py>0){px=-px;py=-py;}
+    const off=o.t==='ray'?Math.max(60,Math.min(150,L*2.2)):70;
+    text(objLabel(o),x0+ux*off+px*14,y0+uy*off+py*14,col,'center');
+  }
+}
+function tickCfg(){const ppm=62*S.view.k,L=[.1,.2,.5,1,2,5,10].find(s=>s*ppm>=72)||10;
+  let mi={10:1,5:1,2:1,1:.1,.5:.1,.2:.1,.1:.1}[L];if(mi*ppm<4)mi=L===1?.5:(L>=5?5:1);if(mi*ppm<4)mi=L;return {L,mi,ppm};}
+const fTick=(m,L,pad)=>{const g=Math.floor(m/60+1e-9),mm=m-g*60;return (pad?String(g).padStart(pad,'0'):g)+'°'+(L<1?mm.toFixed(1).padStart(4,'0').replace('.',','):String(Math.round(mm)).padStart(2,'0'))+"'";};
+function drawGrid(c){
+  const pl=planeAt(RL,RT),pr=planeAt(SW,SH);
+  const e0=Math.max(-380,pl.e),e1=Math.min(-310,pr.e),la0=Math.max(40,(latOf(pr)-35)*60),la1=Math.min(80,(latOf(pl)-35)*60);
+  ctx.setLineDash([]);ctx.strokeStyle=T.grid;ctx.lineWidth=1;ctx.beginPath();
+  const NS=[NP[40],NP[50],NP[60]-1e-6,NP[60],NP[70],NP[80]];
+  for(let i=Math.ceil(e0/c.L-1e-9);i*c.L<=e1+1e-9;i++){const e=i*c.L;NS.forEach((n,k)=>{const [x,y]=scrOf({e,n});k?ctx.lineTo(x,y):ctx.moveTo(x,y);});}
+  for(let i=Math.ceil(la0/c.L-1e-9);i*c.L<=la1+1e-9;i++){const n=psi(35+i*c.L/60);for(let e=-380;e<=-310;e+=10){const [x,y]=scrOf({e,n});e===-380?ctx.moveTo(x,y):ctx.lineTo(x,y);}}
+  ctx.stroke();
+  // marco de la carta
+  ctx.beginPath();[[ -380,NP[80]],[-310,NP[80]],[-310,NP[40]],[-380,NP[40]]].forEach(([e,n],k)=>{const [x,y]=scrOf({e,n});k?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.closePath();
+  ctx.strokeStyle=UI['rule-hover'];ctx.lineWidth=1;ctx.stroke();
+}
+function drawRulers(c){
+  const pl=planeAt(RL,RT),pr=planeAt(SW,SH),nTop=pl.n,eLeft=pl.e;
+  ctx.setLineDash([]);ctx.fillStyle=UI.panel;ctx.fillRect(0,0,SW,RT);ctx.fillRect(0,0,RL,SH);
+  ctx.strokeStyle=UI.rule;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RL,RT+.5);ctx.lineTo(SW,RT+.5);ctx.moveTo(RL+.5,RT);ctx.lineTo(RL+.5,SH);ctx.stroke();
+  ctx.font='500 11px '+UI['f-mono'];ctx.textBaseline='middle';
+  const st=c.mi,per=Math.round(c.L/st);
+  // longitudes
+  ctx.strokeStyle=UI.muted;ctx.fillStyle=UI.muted;ctx.textAlign='center';ctx.beginPath();
+  for(let i=Math.ceil(Math.max(-380,pl.e)/st-1e-9);i*st<=Math.min(-310,pr.e)+1e-9;i++){const e=i*st,x=scrOf({e,n:nTop})[0];if(x<RL)continue;
+    const maj=i%per===0,mid=isI(e);ctx.moveTo(x+.5,RT);ctx.lineTo(x+.5,RT-(maj?10:mid?7:4));if(maj)ctx.fillText(fTick(-e,c.L),x,8);}
+  ctx.stroke();
+  // latitudes
+  ctx.textAlign='right';ctx.beginPath();
+  const la0=Math.max(40,(latOf(pr)-35)*60),la1=Math.min(80,(latOf(pl)-35)*60);
+  for(let i=Math.ceil(la0/st-1e-9);i*st<=la1+1e-9;i++){const m=i*st,y=scrOf({e:eLeft,n:psi(35+m/60)})[1];if(y<RT)continue;
+    const maj=i%per===0,mid=isI(m);ctx.moveTo(RL,y+.5);ctx.lineTo(RL-(maj?10:mid?7:4),y+.5);if(maj)ctx.fillText(fTick(2100+m,c.L),RL-12,y);}
+  ctx.stroke();
+  ctx.fillStyle=UI.panel;ctx.fillRect(0,0,RL,RT);ctx.fillStyle=UI.accent;ctx.textAlign='center';ctx.font='600 11px '+UI['f-ui'];ctx.fillText('N · W',RL/2,RT/2);
+  // cursor sobre las reglas
+  const q=S.snap&&S.cur?S.snap.p:null;
+  if(q&&inChart(q)){const [x,y]=scrOf(q);
+    if(x>RL&&y>RT){ctx.setLineDash([4,5]);ctx.strokeStyle=S.tema==='noche'?'rgba(255,122,217,.6)':'rgba(181,18,127,.55)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x,RT);ctx.lineTo(x,y-12);ctx.moveTo(RL,y);ctx.lineTo(x-12,y);ctx.stroke();ctx.setLineDash([]);
+      ctx.font='600 11px '+UI['f-mono'];
+      const tl=fTick(-q.e,.1),tw=ctx.measureText(tl).width+10,bx=Math.min(SW-tw,Math.max(RL,x-tw/2));
+      ctx.fillStyle=UI.accent;ctx.fillRect(bx,2,tw,RT-4);ctx.fillStyle=UI['on-accent'];ctx.textAlign='center';ctx.fillText(tl,bx+tw/2,RT/2);
+      const tt=fTick(latOf(q)*60,.1);ctx.fillStyle=UI.accent;ctx.fillRect(1,y-9,RL-2,18);ctx.fillStyle=UI['on-accent'];ctx.fillText(tt,RL/2,y);}
+  }
+}
+function drawScale(){
+  const ppM=61.9*S.view.k,N=[.1,.2,.5,1,2,5,10].find(s=>s*ppM>=70)||10,w=N*ppM,x=RL+12,y=SH-16-barH;
+  ctx.setLineDash([]);ctx.fillStyle=UI.panel;ctx.fillRect(x-6,y-16,w*2+62,28);
+  for(let i=0;i<4;i++){ctx.fillStyle=i%2?UI.muted:UI.accent;ctx.fillRect(x+i*w/2,y,w/2,5);}
+  ctx.font='500 11px '+UI['f-mono'];ctx.fillStyle=UI.text;ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText('0',x,y-7);ctx.fillText(nf(N,N<1?1:0),x+w-4,y-7);ctx.fillText(nf(2*N,N<1?1:0)+' M',x+2*w-4,y-7);
+}
+function drawLights(t){
+  LMS.forEach(l=>{const [x,y]=scrOf(l.p);if(x<-80||y<-80||x>SW+80||y>SH+80)return;
+    const on=RM?0:(litNow(l,t)?1:0);l.g+=(on-l.g)*.3;
+    if(l.g>.02){const R=(S.tema==='noche'?54:30)*(.7+.3*l.g),c=l.col==='g'?'90,255,150':l.col==='r'?'255,90,90':'255,214,70';
+      const gr=ctx.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,`rgba(${c},${.95*l.g})`);gr.addColorStop(.35,`rgba(${c},${.45*l.g})`);gr.addColorStop(1,`rgba(${c},0)`);
+      ctx.fillStyle=gr;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fill();}
+    ctx.setLineDash([]);ctx.beginPath();ctx.arc(x,y,6.5,0,7);strk(T.lm,1.7);ctx.beginPath();ctx.arc(x,y,1.7,0,7);ctx.fillStyle=T.lm;ctx.fill();});
+}
+function render(t){
+  ctx.setTransform(DPR,0,0,DPR,0,0);ctx.clearRect(0,0,SW,SH);
+  const c=tickCfg();
+  drawGrid(c);drawCurrent(t);drawLights(t);
+  S.objs.forEach(o=>{if(o.id!==S.sel)drawObj(o,false)});
+  const so=S.objs.find(o=>o.id===S.sel);if(so)drawObj(so,true);
+  drawSim(t);drawFx();
+  const sn=S.snap;
+  if(sn&&S.cur&&S.pend.length&&!['mover','borrar','barco'].includes(S.tool)){
+    const a=S.pend[0];ctx.globalAlpha=.75;let o=null;
+    if(S.tool==='rumbo')o=mkSeg(a.p,sn.p,S.opt.rKind||'rv');
+    if(S.tool==='demora'&&dist(a.p,sn.p)>.02)o=mkRay(a.p,brg(a.p,sn.p));
+    if(S.tool==='enfil'&&dist(a.p,sn.p)>.02)o=mkLine(a.p,brg(a.p,sn.p));
+    if(S.tool==='circ'&&dist(a.p,sn.p)>.02)o=mkCirc(a.p,dist(a.p,sn.p));
+    if(S.tool==='paralela')o=mkLine(sn.p,a.c);
+    if(o)drawObj(o,false);ctx.globalAlpha=1;
+  }
+  if(S.pend.length&&S.pend[0].p){const [x,y]=scrOf(S.pend[0].p);ctx.beginPath();ctx.arc(x,y,4.5,0,7);ctx.fillStyle=T.pt;ctx.fill();ctx.strokeStyle=T.cas;ctx.lineWidth=1.5;ctx.stroke();}
+  if(sn&&S.cur&&S.tool!=='mover'){
+    const [x,y]=scrOf(sn.p);ctx.setLineDash([]);
+    if(sn.kind!=='libre'){ctx.beginPath();ctx.arc(x,y,10,0,7);strk(T.txt,2);
+      const L=sn.kind==='faro'?LMS.find(l=>l.name===sn.label):null;
+      const lbl={faro:sn.label+(L?' · '+L.ch:''),punto:'punto '+sn.label,extremo:'extremo',centro:'centro',origen:'origen',corte:'corte',tangente:'tangente',sobre:''}[sn.kind];
+      if(lbl)text(lbl,x+15,y+17,T.txt);}
+  }else if(S.cur&&S.tool==='mover'){ // nombre del faro al pasar por encima
+    const m=planeAt(S.cur.x,S.cur.y),sc=62*S.view.k,l=LMS.find(l=>Math.hypot(l.p.e-m.e,l.p.n-m.n)*sc<14);
+    if(l){const [x,y]=scrOf(l.p);text(l.name+' · '+l.ch,x+14,y+17,T.txt);}
+  }
+  drawRulers(c);drawScale();
+}
+
+/* ---------- Viento y corriente sobre la carta ---------- */
+const WDIR={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
+function abFor(rv){const c=S.cond;if(!c.w||!(c.ab>0))return 0;const rel=norm(WDIR[c.w]-rv);if(rel<8||rel>352||Math.abs(rel-180)<8)return 0;return c.ab*(rel<180?-1:1);}
+const PART=[];let partT=0;
+function landPx(x,y){if(!MASK)return false;const i=Math.floor(x/8),j=Math.floor(y/8);if(i<0||j<0||i>=MASK.w||j>=MASK.h)return true;return MASK.d[(j*MASK.w+i)*4]>127;}
+function drawCurrent(t){
+  const c=S.cond,dt=Math.min(.1,Math.max(0,t-partT));partT=t;if(!(c.ih>0)||!MASK)return;
+  const k=S.view.k,tx=S.view.tx,ty=S.view.ty,ux=Math.sin(rad(c.rc)),uy=-Math.cos(rad(c.rc));
+  const fx0=Math.max((RL-tx)/k,330),fx1=Math.min((SW-tx)/k,4680),fy0=Math.max((RT-ty)/k,222),fy1=Math.min((SH-ty)/k,3278);
+  if(fx1<=fx0||fy1<=fy0)return;
+  const col=S.tema==='papel'?'23,70,209':S.tema==='noche'?'140,225,255':'255,255,255',ih=Math.min(c.ih,5);
+  ctx.setLineDash([]);ctx.lineCap='round';
+  if(RM){const g=110,L=12;ctx.strokeStyle=`rgba(${col},.6)`;ctx.lineWidth=1.6;ctx.beginPath();
+    for(let sx=RL+g/2;sx<SW;sx+=g)for(let sy=RT+g/2;sy<SH;sy+=g){const x=(sx-tx)/k,y=(sy-ty)/k;if(x<330||x>4680||y<222||y>3278||landPx(x,y))continue;
+      const ax=sx+ux*L,ay=sy+uy*L;ctx.moveTo(sx-ux*L,sy-uy*L);ctx.lineTo(ax,ay);ctx.lineTo(ax-ux*6-uy*4,ay-uy*6+ux*4);ctx.moveTo(ax,ay);ctx.lineTo(ax-ux*6+uy*4,ay-uy*6-ux*4);}
+    ctx.stroke();ctx.lineCap='butt';return;}
+  const N=Math.round(Math.min(420,(fx1-fx0)*(fy1-fy0)*k*k/2400)),v=(12+9*ih)/k,len=5+3*ih;
+  const spawn=p=>{for(let i=0;i<8;i++){p.x=fx0+Math.random()*(fx1-fx0);p.y=fy0+Math.random()*(fy1-fy0);if(!landPx(p.x,p.y))break;}p.age=0;p.life=1.4+Math.random()*2.4;return p;};
+  while(PART.length<N){const p=spawn({});p.age=Math.random()*p.life;PART.push(p);}PART.length=N;
+  ctx.lineWidth=1.8;
+  for(const p of PART){p.age+=dt;p.x+=ux*v*dt;p.y+=uy*v*dt;
+    if(p.age>p.life||p.x<fx0||p.x>fx1||p.y<fy0||p.y>fy1||landPx(p.x,p.y)){spawn(p);continue;}
+    const a=Math.sin(Math.PI*p.age/p.life)*.7,sx=p.x*k+tx,sy=p.y*k+ty;
+    ctx.strokeStyle=`rgba(${col},${a.toFixed(2)})`;ctx.beginPath();ctx.moveTo(sx-ux*len,sy-uy*len);ctx.lineTo(sx,sy);ctx.stroke();}
+  ctx.lineCap='butt';
+}
+
+/* ---------- Barco: navega con el rumbo y la velocidad que le des y con el viento y la corriente de Condiciones ---------- */
+const sim={p:null,pe:null,start:null,t:0,run:false,trail:[],est:[],dn:0,msg:'',marks:[],dest:null,plan:null,dmin:1e9,liveT:0};
+const parseH=s=>{const m=String(s).match(/(\d{1,2})[:.h](\d{2})/);return m?(+m[1])*60+(+m[2]):600;};
+function simPar(){const q=S.simPar,c=S.cond;let rv=num(q.bC);if(isNaN(rv))rv=0;if(q.bCT==='a')rv+=Ct();rv=norm(rv);const ab=abFor(rv);
+  return {rv,ab,rs:norm(rv+ab),vm:Math.max(0,num(q.bV)||0),rc:c.rc,ih:c.ih>0?c.ih:0,x:+q.bX||120,h0:parseH(q.bH)};}
+const nowH=()=>hhmm(simPar().h0+sim.t/60);
+function simSet(p){Object.assign(sim,{p,pe:p,start:p,t:0,run:false,trail:[p],est:[p],dn:0,msg:'',marks:[],dmin:1e9});
+  if(sim.dest&&sim.plan)setDest(sim.dest,true);else{sim.plan=null;renderBar();}renderCard();draw();}
+function setDest(d,quiet){sim.dest=d;sim.dmin=1e9;if(!sim.p){renderBar();return;}
+  const q=simPar(),ref=brg(sim.p,d),D=dist(sim.p,d),t=q.vm>0?tri('b',{ref,vm:q.vm,rc:q.rc,ih:q.ih}):null;
+  if(!t){sim.plan=null;if(!quiet)flash(q.vm>0?'Con esta corriente el barco no puede llegar: sube la velocidad.':'Pon una velocidad de máquina mayor que cero.');renderBar();draw();return;}
+  let rv=norm(t.rv-abFor(t.rv));rv=norm(t.rv-abFor(rv));
+  S.simPar.bC=f3(rv,1).slice(0,-1);S.simPar.bCT='v';
+  sim.plan={from:sim.p,ref,D,rs:t.rv,rv,ab:abFor(rv),ra:norm(rv-Ct()),vef:t.vef,eta:q.h0+sim.t/60+D/t.vef*60};
+  save();renderBar();draw();}
+function simStep(dt){
+  const q=simPar(),h=dt*q.x/3600;
+  const a=dest(sim.p,q.rs,q.vm*h),p=q.ih>0?dest(a,q.rc,q.ih*h):a;
+  sim.dn+=dist(sim.p,p);sim.pe=dest(sim.pe,q.rs,q.vm*h);
+  const m0=Math.floor(sim.t/900);sim.t+=dt*q.x;sim.p=p;
+  if(Math.floor(sim.t/900)>m0)sim.marks.push({p,t:Math.floor(sim.t/900)*15});
+  if(dist(sim.trail[sim.trail.length-1],p)>.04){sim.trail.push(p);sim.est.push(sim.pe);if(sim.trail.length>6000){sim.trail.shift();sim.est.shift();}}
+  let stop='';
+  if(sim.dest){const d=dist(p,sim.dest);if(d<.05||(sim.dmin<.4&&d>sim.dmin+.005))stop='Has llegado al destino a HRB '+nowH()+(d>=.05?' (pasas a '+nf(d,2)+' M)':'')+'.';sim.dmin=Math.min(sim.dmin,d);}
+  if(!stop&&!inChart(p))stop='Has salido de la carta.';
+  if(!stop&&isLand(p))stop='¡Varada! Has tocado tierra a HRB '+nowH()+'.';
+  if(stop){sim.run=false;sim.msg=stop;renderBar();}
+  if(S.simPar.bFollow){const [x,y]=scrOf(p),cx=(SW+RL)/2,cy=(SH+RT-barH)/2;S.view.tx+=(cx-x)*.12;S.view.ty+=(cy-y)*.12;applyView();}
+}
+const bar=$('#boatbar');let barH=0;
+function updBarH(){barH=bar.hidden?0:bar.offsetHeight+10;$('#hud').style.bottom=(barH+38)+'px';draw();}
+function renderBar(){
+  bar.hidden=!sim.p;if(!sim.p){updBarH();return;}
+  const q=S.simPar,blind=!!q.bBlind,pl=sim.plan,o=v=>`<option value="${v}">${v/60} min/s</option>`;
+  bar.innerHTML=`<button class="play${sim.run?' on':''}" id="bPlay" ${sim.msg?'disabled':''} aria-label="${sim.run?'Pausar':'Navegar'}" title="${sim.run?'Pausar (espacio)':'Navegar (espacio)'}">${sim.run?'❚❚':'▶'}</button>
+   <label class="clock"><small>HRB</small><input id="bH" ${sim.t>0?'readonly':''} aria-label="Hora de salida" title="${sim.t>0?'Hora a bordo':'Hora de salida: puedes cambiarla'}" value="${sim.t>0?nowH():esc(q.bH)}"></label>
+   <span class="grp"><label for="bC">Rumbo</label><input class="n s" id="bC" inputmode="decimal" value="${esc(q.bC)}"><select id="bCT" aria-label="Rumbo verdadero o de aguja"><option value="v">Rv</option><option value="a">Ra</option></select><output class="cv" id="bCv"></output></span>
+   <span class="grp"><label for="bV">Vm</label><input class="n s" id="bV" inputmode="decimal" value="${esc(q.bV)}"><label>kn</label></span>
+   <button class="btn${S.pickDest?' mag':' alt'}" id="bGo" title="Elige un destino en la carta: el rumbo se calcula con el viento y la corriente">${S.pickDest?'Pulsa el destino…':'Ir a…'}</button>
+   <span class="grp end"><select id="bX" aria-label="Velocidad del tiempo">${[60,120,300,600].map(o).join('')}</select>
+    <button class="btn alt" id="bMark" title="Deja un punto con la hora en la situación actual">Marcar</button><button class="btn alt" id="bReset" title="Vuelve a la salida">Reiniciar</button><button class="x" id="bClose" title="Quitar el barco" aria-label="Quitar el barco">×</button></span>
+   <span class="brk"></span><span class="info" id="bInfo"></span>
+   <span class="grp"><button class="tg" id="bFollow" aria-pressed="${!!q.bFollow}" title="La carta sigue al barco">Seguir</button><button class="tg" id="bBlind" aria-pressed="${blind}" title="Oculta el barco: sitúate con las demoras y desactívalo para comprobar">A ciegas</button></span>
+   ${sim.msg?`<div class="alert">${sim.msg}</div>`:pl?`<div class="plan">Destino a ${nf(pl.D,1)} M · Ref <b>${f3(pl.ref,1)}</b> → gobierna <b>Rv ${f3(pl.rv,1)}</b>${pl.ab?` (Rs ${f3(pl.rs,1)}, abatimiento ${sg(pl.ab)}°)`:''} · <b>Ra ${f3(pl.ra,1)}</b> · Vef ${nf(pl.vef,1)} kn · llegada HRB ${hhmm(pl.eta)}</div>`:''}`;
+  $('#bCT').value=q.bCT;updCv();$('#bX').value=q.bX;barLive(true);updBarH();}
+function barLive(force){if(!sim.p||bar.hidden)return;const now=performance.now();if(!force&&now-sim.liveT<150)return;sim.liveT=now;
+  const q=simPar(),blind=!!S.simPar.bBlind,g=tri('a',{rv:q.rs,vm:q.vm,rc:q.rc,ih:q.ih}),set=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
+  const hb=$('#bH');if(hb&&sim.t>0)hb.value=nowH();
+  const short=n=>esc(n.replace(/^(Punta|Cabo|Isla) (de )?/,'')),it=(k,v)=>`<span><small>${k}</small>${v}</span>`;
+  const near=LMS.map(l=>({l,d:dist(sim.p,l.p),b:brg(sim.p,l.p)})).sort((a,b)=>a.d-b.d).slice(0,blind?3:2);
+  const chain=`Ra ${f3(q.rv-Ct())} → Rv ${f3(q.rv)}`+(q.ab?` → Rs ${f3(q.rs)}`:'')+(blind?'':(q.ih>0?` → <b>Ref ${f3(g.ref)}</b>`:'')+` · ${nf(g.vef,1)} kn`);
+  set('bInfo',it('Rumbos',chain)+it('Navegado',nf(sim.dn,1)+' M')+(blind?'':it('Situación',fLat(latOf(sim.p))+' · '+fLon(lonOf(sim.p))))
+    +near.map(x=>it(short(x.l.name),`<b>Dv ${f3(x.b)}</b>${blind?'':' · '+nf(x.d,1)+' M'}`)).join(''));}
+bar.addEventListener('input',e=>{const i=e.target;if(!(i.id in S.simPar))return;S.simPar[i.id]=i.value;
+  if(['bC','bCT','bV'].includes(i.id)&&sim.plan){sim.plan=null;const pe=bar.querySelector('.plan');if(pe){pe.remove();updBarH();}}
+  save();barLive(true);updCv();draw();});
+bar.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input'))e.target.blur();});
+bar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const id=b.id;
+  if(id==='bPlay'){sim.run=!sim.run;renderBar();}
+  if(id==='bGo'){if(S.tool!=='barco')setTool('barco');S.pickDest=!S.pickDest;renderBar();renderCard();}
+  if(id==='bFollow'||id==='bBlind'){S.simPar[id]=!S.simPar[id];save();renderBar();draw();}
+  if(id==='bMark'){push();add(mkPt(sim.p,nowH()));changed();flash('Situación marcada a HRB '+nowH()+'.');}
+  if(id==='bReset'&&sim.start)simSet(sim.start);
+  if(id==='bClose'){Object.assign(sim,{p:null,dest:null,plan:null,run:false,msg:''});S.pickDest=false;renderBar();renderCard();draw();}
+});
+function loadSim(s){
+  Object.assign(sim,{dest:null,plan:null,run:false});S.pickDest=false;
+  S.dm=s.dm||0;S.dv=s.dv||0;S.ctx=null;Object.assign(S.cond,{w:s.w||'',rc:s.rc||0,ih:s.ih||0});if(s.ab)S.cond.ab=s.ab;writeCond();condChanged();
+  Object.assign(S.simPar,{bV:String(s.vm),bH:s.h0||'10:00',bBlind:false});
+  if(s.ra!=null){S.simPar.bC=String(s.ra).padStart(3,'0');S.simPar.bCT='a';}
+  if(S.tool!=='barco')setTool('barco');simSet(s.p);if(s.dest)setDest(s.dest);
+  const [x,y]=plane2px(s.p);S.view.tx=(SW+RL)/2-x*S.view.k;S.view.ty=(SH+RT-barH)/2-y*S.view.k;inert=null;applyView();
+  flash('Barco listo con las condiciones del ejercicio. Pulsa ▶ para navegar.');}
+function drawSim(t){
+  const blind=!!S.simPar.bBlind;
+  if(sim.dest){const [x,y]=scrOf(sim.dest);
+    if(sim.plan&&!blind){const [ax,ay]=scrOf(sim.plan.from);ctx.setLineDash([8,6]);ctx.beginPath();ctx.moveTo(ax,ay);ctx.lineTo(x,y);strk(T.rc,1.4);ctx.setLineDash([]);}
+    ctx.beginPath();ctx.arc(x,y,9,0,7);strk(T.rc,2);ctx.beginPath();ctx.arc(x,y,3,0,7);ctx.fillStyle=T.rc;ctx.fill();text('Destino',x+13,y-13,T.rc);}
+  if(!sim.p||blind)return;const q=simPar();
+  const poly=a=>{ctx.beginPath();a.forEach((p,i)=>{const [x,y]=scrOf(p);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});};
+  if(sim.est.length>1){ctx.setLineDash([6,6]);poly(sim.est.concat([sim.pe]));strk(T.rv,1.6);ctx.setLineDash([]);}
+  if(sim.trail.length>1){poly(sim.trail.concat([sim.p]));strk(T.ref,2.6);}
+  if(dist(sim.pe,sim.p)>.05){poly([sim.pe,sim.p]);strk(T.rc,2);const [ex,ey]=scrOf(sim.pe);ctx.beginPath();ctx.arc(ex,ey,5,0,7);ctx.fillStyle=T.fill;ctx.fill();strk(T.rv,1.6);text('Se',ex+9,ey-9,T.rv);}
+  sim.marks.forEach(m=>{const [x,y]=scrOf(m.p);ctx.beginPath();ctx.arc(x,y,3,0,7);ctx.fillStyle=T.ref;ctx.fill();if(m.t%30===0)text(hhmm(q.h0+m.t),x+8,y+10,T.txt,'left',11);});
+  const [sx,sy]=scrOf(sim.start);ctx.beginPath();ctx.arc(sx,sy,4,0,7);ctx.fillStyle=T.ref;ctx.fill();
+  const [x,y]=scrOf(sim.p);
+  if(S.cond.w&&S.cond.ab>0){const wd=rad(WDIR[S.cond.w]),ux=Math.sin(wd),uy=-Math.cos(wd),x0=x+ux*62,y0=y+uy*62,x1=x+ux*28,y1=y+uy*28;
+    ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.lineTo(x1+ux*8-uy*5,y1+uy*8+ux*5);ctx.moveTo(x1,y1);ctx.lineTo(x1+ux*8+uy*5,y1+uy*8-ux*5);strk(T.txt,1.8);
+    text('viento '+S.cond.w,x0+ux*14,y0+uy*14,T.txt,'center',11);}
+  const [hx,hy]=scrOf(dest(sim.p,q.rv,.5)),hl=Math.hypot(hx-x,hy-y)||1,ang=Math.atan2(hy-y,hx-x)+Math.PI/2,bob=RM||!sim.run?0:Math.sin(t*5)*.06;
+  ctx.setLineDash([3,5]);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(hx-x)/hl*70,y+(hy-y)/hl*70);ctx.strokeStyle=T.rv;ctx.lineWidth=1.5;ctx.stroke();ctx.setLineDash([]);
+  ctx.save();ctx.translate(x,y);ctx.rotate(ang+bob);
+  if(sim.run&&!RM){ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=1.5;const w=6+Math.sin(t*8)*2;ctx.beginPath();ctx.moveTo(-5,13);ctx.lineTo(-9-w/3,24+w);ctx.moveTo(5,13);ctx.lineTo(9+w/3,24+w);ctx.stroke();}
+  ctx.beginPath();ctx.moveTo(0,-17);ctx.bezierCurveTo(7,-9,8,3,6,13);ctx.lineTo(-6,13);ctx.bezierCurveTo(-8,3,-7,-9,0,-17);ctx.closePath();
+  ctx.fillStyle=T.boat;ctx.fill();ctx.strokeStyle='#061320';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(3.5,4);ctx.lineTo(-3.5,4);ctx.closePath();ctx.fillStyle='#ff62c6';ctx.fill();
+  ctx.restore();
+}
+
+/* ---------- Lista de trazados ---------- */
+const TN={pt:'Punto',seg:'Rumbo y distancia',ray:'Demora',line:'Línea',circ:'Distancia'};
+function objDesc(o){
+  if(o.t==='pt')return fLat(latOf(o.p))+' · '+fLon(lonOf(o.p));
+  if(o.t==='seg')return segLabel(o)+(o.kind!=='med'?'':' · opuesto '+f3(brg(o.b,o.a),1));
+  if(o.t==='ray')return (o.ag!=null?'Da '+fA(o.ag)+' '+sg(n180(o.c+180-o.ag))+'° = ':'')+'Dv '+f3(o.c+180,1)+(o.ref?' a '+o.ref:'')+' (trazada al '+f3(o.c,1)+')';
+  if(o.t==='line')return f3(o.c,1)+' / '+f3(o.c+180,1)+(o.ref?' · '+o.ref:'');
+  if(o.t==='circ')return nf(o.r,2)+' M'+(o.ref?' de '+o.ref:' · centro '+fLat(latOf(o.c))+' '+fLon(lonOf(o.c)));
+}
+function objType(o){if(o.t==='seg')return {rv:'Rumbo (Rv / Rs)',ref:'Rumbo efectivo',rc:'Corriente',med:'Rumbo y distancia'}[o.kind];if(o.t==='line')return o.kindName||'Enfilación / oposición';return TN[o.t];}
+function renderList(){
+  const el=$('#pane-trazados');
+  if(!S.objs.length){el.innerHTML='<p class="empty">Aún no hay trazados. Elige un útil en la regleta de la izquierda y pulsa sobre la carta. Los círculos magenta marcan los faros: el cursor se imanta a ellos, a los cortes y a las tangentes.</p>';return;}
+  let h='<ul class="objs">';
+  S.objs.forEach(o=>{
+    h+=`<li data-id="${o.id}" class="${o.id===S.sel?'sel':''}"><span class="dot" style="background:${TH.noche[o.t==='seg'?o.kind:o.t]}"></span><div><div class="t">${esc(objType(o))} ${o.sol?'<span class="tag sol">solución</span>':''}${o.demo?'<span class="tag">ejemplo</span>':''}</div><div class="m">${o.t==='pt'?`<input class="name" data-name="${o.id}" value="${esc(o.label)}" aria-label="Nombre del punto"> `:''}${esc(objDesc(o))}</div></div><button class="x" data-del="${o.id}" title="Borrar" aria-label="Borrar trazado">×</button></li>`;});
+  h+='</ul>';
+  const so=S.objs.find(o=>o.id===S.sel);
+  if(so&&so.t==='seg'){const d=dist(so.a,so.b);h+=`<h3>Tramo seleccionado</h3><div class="calc"><div class="row" style="margin-top:0"><label for="segV">A</label><input class="n" id="segV" inputmode="decimal" value="${S.segV||8}"><label>kn se recorre en</label> <b class="num" id="segT"></b></div><div class="hint">Rumbo de aguja con la Ct actual: <b class="num">${f3(brg(so.a,so.b)-Ct(),1)}</b></div></div>`;
+    setTimeout(()=>{const f=()=>{const v=num($('#segV').value);S.segV=v;$('#segT').textContent=v>0?hm(d/v*60):'—';};if($('#segV')){$('#segV').oninput=f;f();}});}
+  el.innerHTML=h;
+}
+$('#pane-trazados').addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');if(d){push();S.objs=S.objs.filter(o=>o.id!=d.dataset.del);if(S.sel==d.dataset.del)S.sel=null;changed();return;}
+  if(e.target.closest('input'))return;
+  const li=e.target.closest('li[data-id]');if(li){S.sel=+li.dataset.id;renderList();draw();}
+});
+$('#pane-trazados').addEventListener('change',e=>{const n=e.target.dataset.name;if(n){const o=S.objs.find(o=>o.id==n);if(o){push();o.label=e.target.value.slice(0,12);changed();}}});
+
+/* ---------- Útiles: una tira plegable con el paso actual y las opciones ---------- */
+const TOOLS={
+ punto:{t:'Punto',steps:['Pulsa en la carta (se imanta a faros y cortes) o escribe la situación.'],h:`<span class="grp"><label for="pLaD">l</label><input class="n s" id="pLaD" inputmode="numeric" value="36" aria-label="Grados de latitud"><label>°</label><input class="n s" id="pLaM" inputmode="decimal" value="00,0" aria-label="Minutos de latitud"><label>' N</label></span>
+   <span class="grp"><label for="pLoD">L</label><input class="n s" id="pLoD" inputmode="numeric" value="005" aria-label="Grados de longitud"><label>°</label><input class="n s" id="pLoM" inputmode="decimal" value="30,0" aria-label="Minutos de longitud"><label>' W</label></span><button class="btn" id="pGo">Situar</button>`},
+ rumbo:{t:'Rumbo',steps:['Pulsa el punto de salida.','Pulsa la llegada, o escribe rumbo y distancia.'],h:`<span class="grp"><select id="rKind" aria-label="Tipo de línea"><option value="rv">Rv / Rs (1 flecha)</option><option value="ref">Efectivo (2 flechas)</option><option value="rc">Corriente (3 flechas)</option><option value="med">Solo medir</option></select></span>
+   <span class="grp"><label for="rC">Rumbo</label><input class="n s" id="rC" inputmode="decimal"><select id="rCT" aria-label="Rumbo verdadero o de aguja"><option value="v">Rv</option><option value="a">Ra</option></select><output class="cv" id="rCv"></output></span>
+   <span class="grp"><label for="rD">Distancia</label><input class="n s" id="rD" inputmode="decimal"><label>M, o</label><input class="n s" id="rV" inputmode="decimal" placeholder="kn" aria-label="Velocidad en nudos"><label>kn ×</label><input class="n s" id="rT" inputmode="decimal" placeholder="min" aria-label="Tiempo en minutos"><label>min</label></span>
+   <button class="btn" id="rGo">Trazar</button><label class="chk" title="El siguiente tramo sale del final de este (estima)"><input type="checkbox" id="rChain" checked>Encadenar</label>`},
+ demora:{t:'Demora',steps:['Pulsa el faro o punto demorado.','Escribe la demora o pulsa en la carta. Se traza la opuesta, hacia la mar.'],h:`<span class="grp"><label for="dB">Demora</label><input class="n s" id="dB" inputmode="decimal"><select id="dBT" aria-label="Demora verdadera o de aguja"><option value="v">Dv</option><option value="a">Da</option></select><output class="cv" id="dCv"></output></span><button class="btn" id="dGo">Trazar</button>`},
+ enfil:{t:'Enfilación',steps:['Pulsa el primer punto.','Pulsa el segundo. La línea se prolonga a ambos lados.']},
+ circ:{t:'Distancia',steps:['Pulsa el centro (faro o punto).','Escribe la distancia o pulsa en la carta.'],h:`<span class="grp"><label for="cR">Distancia</label><input class="n s" id="cR" inputmode="decimal"><label>M</label></span><button class="btn" id="cGo">Trazar</button>`},
+ paralela:{t:'Paralela',steps:['Pulsa la línea que quieres trasladar.','Pulsa el punto por el que debe pasar.']},
+ barco:{t:'Barco',steps:['Pulsa en la carta para poner el barco en la salida (se imanta a puntos y faros).','Maneja el barco desde la barra de abajo. Pulsa en la carta para cambiar la salida.']},
+ borrar:{t:'Borrar',steps:['Pulsa un trazado para borrarlo.']}
+};
+const strip=$('#strip');
+function setTool(t){S.tool=t;S.pend=[];if(t!=='barco')S.pickDest=false;$$('#rail [data-tool]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tool===t));renderCard();renderBar();draw();}
+function renderCard(){
+  const c=TOOLS[S.tool];if(!c){strip.hidden=true;return;}
+  const open=!S.stripMin,step=S.tool==='barco'?(S.pickDest?'Pulsa en la carta el destino.':c.steps[sim.p?1:0]):c.steps[Math.min(S.pend.length,c.steps.length-1)];
+  strip.hidden=false;
+  strip.innerHTML=`<span class="tn">${c.t}</span>`+(open?`<span class="step">${step}</span>${c.h||''}`:'')+`<button class="x" id="stripT" title="${open?'Ocultar esta ayuda':'Mostrar ayuda y opciones'}" aria-label="${open?'Ocultar ayuda y opciones':'Mostrar ayuda y opciones'}">${open?'×':'⋯'}</button>`;
+  strip.querySelectorAll('input,select').forEach(i=>{const v=S.opt[i.id];if(v===undefined)return;if(i.type==='checkbox')i.checked=v;else i.value=v;});updCv();
+}
+strip.addEventListener('input',e=>{const i=e.target;if(i.id)S.opt[i.id]=i.type==='checkbox'?i.checked:i.value;updCv();});
+strip.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input')){const b=strip.querySelector('.btn');if(b){e.preventDefault();b.click();}}});
+function needOrigin(){if(!S.pend.length){flash('Pulsa primero el punto de origen en la carta.');return true;}return false;}
+let flashT,flashOn=false;function flash(msg){$('#hud').textContent=msg;flashOn=true;clearTimeout(flashT);flashT=setTimeout(()=>{flashOn=false;$('#hud').textContent='';},3400);}
+strip.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;const id=b.id;
+  if(id==='stripT'){S.stripMin=!S.stripMin;save();renderCard();}
+  if(id==='pGo'){const la=num($('#pLaD').value)+num($('#pLaM').value)/60,lo=num($('#pLoD').value)+num($('#pLoM').value)/60;
+    if(!(la>=35.66&&la<=36.34&&lo>=5.16&&lo<=6.34)){flash('Esa situación queda fuera de la carta (35° 40\' – 36° 20\' N, 5° 10\' – 6° 20\' W).');return;}
+    push();const o=add(mkPt(PL(la,-lo),ptName()));S.sel=o.id;changed();}
+  if(id==='rGo'){if(needOrigin())return;let c=num($('#rC').value),d=num($('#rD').value);const v=num($('#rV').value),t=num($('#rT').value);
+    if(isNaN(d)&&v>0&&t>0)d=v*t/60;if(isNaN(c)||!(d>0)){flash('Escribe el rumbo y la distancia (o velocidad y tiempo).');return;}
+    const ag=$('#rCT').value==='a'?c:null;if(ag!=null)c+=Ct();const a=S.pend[0];finishSeg(a,{p:dest(a.p,c,d),label:''},ag);}
+  if(id==='dGo'){if(needOrigin())return;let d=num($('#dB').value);if(isNaN(d)){flash('Escribe la demora en grados.');return;}
+    const ag=$('#dBT').value==='a'?d:null;if(ag!=null)d+=Ct();push();const o=add(mkRay(S.pend[0].p,d+180,S.pend[0].label,ag!=null?{ag}:undefined));S.sel=o.id;S.pend=[];renderCard();changed();}
+  if(id==='cGo'){if(needOrigin())return;const r=num($('#cR').value);if(!(r>0)){flash('Escribe la distancia en millas.');return;}
+    push();const o=add(mkCirc(S.pend[0].p,r,S.pend[0].label));S.sel=o.id;S.pend=[];renderCard();changed();}
+});
+function finishSeg(a,b,ag){push();const o=add(mkSeg(a.p,b.p,S.opt.rKind||'rv',ag!=null?{ag}:undefined));S.sel=o.id;S.pend=S.opt.rChain!==false?[{p:b.p,label:b.label}]:[];renderCard();changed();}
+function click(sx,sy){
+  const t=S.tool;
+  if(t==='mover'){const o=pick(sx,sy);S.sel=o?o.id:null;renderList();draw();if(o)showTab('trazados');return;}
+  if(t==='borrar'){const o=pick(sx,sy);if(o){push();S.objs=S.objs.filter(x=>x!==o);if(S.sel===o.id)S.sel=null;changed();}return;}
+  if(t==='paralela'&&!S.pend.length){const o=pick(sx,sy);if(o&&o.t!=='pt'&&o.t!=='circ'){const c=o.t==='seg'?brg(o.a,o.b):o.c;S.pend=[{c}];renderCard();draw();}else flash('Pulsa sobre una línea, un rumbo o una demora.');return;}
+  const sn=snapAt(sx,sy),ref=(sn.kind==='faro'||sn.kind==='punto')?sn.label:'';
+  if(t==='barco'){
+    if(S.pickDest&&sim.p){if(dist(sim.p,sn.p)<.05)return;S.pickDest=false;setDest(sn.p);renderCard();return;}
+    if(sim.run){flash('Pausa el barco para cambiar la salida.');return;}
+    if(!inChart(sn.p)){flash('Elige la salida dentro de la carta.');return;}
+    if(isLand(sn.p)&&!['faro','punto'].includes(sn.kind)){flash('Ese punto está en tierra. Elige la salida en la mar.');return;}
+    simSet(sn.p);return;}
+  if(t==='punto'){push();const o=add(mkPt(sn.p,ptName()));S.sel=o.id;changed();return;}
+  if(!S.pend.length){S.pend=[{p:sn.p,label:ref}];renderCard();draw();return;}
+  const a=S.pend[0];
+  if(t==='paralela'){push();const o=add(mkLine(sn.p,a.c,'',{kindName:'Paralela',dash:true}));S.sel=o.id;S.pend=[];renderCard();changed();return;}
+  if(dist(a.p,sn.p)<.02)return;
+  if(t==='rumbo'){finishSeg(a,{p:sn.p,label:ref});return;}
+  push();let o;
+  if(t==='demora')o=add(mkRay(a.p,brg(a.p,sn.p),a.label));
+  if(t==='enfil')o=add(mkLine(a.p,brg(a.p,sn.p),[a.label,ref].filter(Boolean).join(' – ')));
+  if(t==='circ')o=add(mkCirc(a.p,Math.round(dist(a.p,sn.p)*100)/100,a.label));
+  S.sel=o.id;S.pend=[];renderCard();changed();
+}
+function hover(sx,sy){
+  const m=planeAt(sx,sy);S.cur={x:sx,y:sy};S.snap=S.tool==='mover'?{p:m,kind:'libre'}:snapAt(sx,sy);const p=S.snap.p;
+  $('#readout').innerHTML='<i>l</i>'+fLat(latOf(p))+'&nbsp;&nbsp;<i>L</i>'+fLon(lonOf(p));
+  let h='';
+  if(S.pend.length&&S.pend[0].p){const a=S.pend[0].p;
+    if(dist(a,p)>.02){
+      if(S.tool==='rumbo')h='Rv '+f3(brg(a,p),1)+' · '+nf(dist(a,p),2)+' M';
+      if(S.tool==='demora')h='Dv '+f3(brg(p,a),1)+' (opuesta '+f3(brg(a,p),1)+')';
+      if(S.tool==='enfil')h=f3(brg(a,p),1)+' / '+f3(brg(p,a),1);
+      if(S.tool==='circ')h='d = '+nf(dist(a,p),2)+' M';}
+  }
+  if(S.tool==='barco'&&S.pickDest&&sim.p&&!S.simPar.bBlind&&dist(sim.p,p)>.02)h='Destino: Ref '+f3(brg(sim.p,p),1)+' · '+nf(dist(sim.p,p),2)+' M';
+  if(h||!flashOn){if(h){flashOn=false;clearTimeout(flashT);}$('#hud').textContent=h;}draw();
+}
+
+/* ---------- Puntero ---------- */
+const ptrs=new Map();let drag=null,pinch=null,vel={x:0,y:0,t:0};
+const loc=e=>{const r=stage.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);const [x,y]=loc(e);ptrs.set(e.pointerId,[x,y]);inert=null;zt=null;
+  if(ptrs.size===1){drag={x,y,tx:S.view.tx,ty:S.view.ty,moved:false,lx:x,ly:y};vel={x:0,y:0,t:performance.now()};}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1])};if(drag)drag.moved=true;}});
+cv.addEventListener('pointermove',e=>{const [x,y]=loc(e);
+  if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,[x,y]);
+  if(ptrs.size===2&&pinch){const [a,b]=[...ptrs.values()],d=Math.hypot(a[0]-b[0],a[1]-b[1]);zoomAt((a[0]+b[0])/2,(a[1]+b[1])/2,d/pinch.d);pinch.d=d;return;}
+  if(drag&&ptrs.size===1){if(!drag.moved&&Math.hypot(x-drag.x,y-drag.y)>5){drag.moved=true;stage.classList.add('pan');}
+    if(drag.moved){const now=performance.now(),dt=Math.max(1,now-vel.t);vel={x:.6*vel.x+.4*(x-drag.lx)/dt,y:.6*vel.y+.4*(y-drag.ly)/dt,t:now};drag.lx=x;drag.ly=y;
+      S.view.tx=drag.tx+x-drag.x;S.view.ty=drag.ty+y-drag.y;S.cur=null;applyView();return;}}
+  if(e.pointerType!=='touch'||ptrs.size===1)hover(x,y);});
+const up=e=>{const [x,y]=loc(e);const was=ptrs.size;ptrs.delete(e.pointerId);
+  if(was===1&&drag&&!drag.moved&&e.type==='pointerup'){hover(x,y);click(x,y);}
+  else if(was===1&&drag&&drag.moved&&!RM&&performance.now()-vel.t<60&&Math.hypot(vel.x,vel.y)>.15)inert={x:vel.x,y:vel.y};
+  if(ptrs.size<2)pinch=null;if(!ptrs.size){drag=null;stage.classList.remove('pan');}
+  else if(ptrs.size===1){const [p]=[...ptrs.values()];drag={x:p[0],y:p[1],tx:S.view.tx,ty:S.view.ty,moved:true,lx:p[0],ly:p[1]};}};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('pointerleave',()=>{if(!ptrs.size){S.cur=null;draw();}});
+cv.addEventListener('wheel',e=>{e.preventDefault();const [x,y]=loc(e);zoomTo(x,y,Math.exp(-e.deltaY*(e.deltaMode?0.05:0.0022)));},{passive:false});
+cv.addEventListener('dblclick',e=>{if(S.tool==='mover'){const [x,y]=loc(e);zoomTo(x,y,1.8);}});
+$('#zIn').onclick=()=>zoomTo((SW+RL)/2,(SH+RT)/2,1.5);$('#zOut').onclick=()=>zoomTo((SW+RL)/2,(SH+RT)/2,1/1.5);$('#zFit').onclick=fit;
+$('#togglePanel').onclick=()=>{$('#panel').hidden=!$('#panel').hidden;requestAnimationFrame(resize);};
+$('#rail').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.tool){if(b.dataset.tool===S.tool&&TOOLS[S.tool]){S.stripMin=!S.stripMin;save();renderCard();}else setTool(b.dataset.tool);}
+  if(b.id==='undo')undo();
+  if(b.id==='clear'&&S.objs.length){push();S.objs=[];S.sel=null;S.pend=[];renderCard();changed();flash('Carta limpia. Pulsa Deshacer para recuperar los trazados.');}});
+function undo(){const u=S.undo.pop();if(u){S.objs=JSON.parse(u);S.sel=null;S.pend=[];renderCard();changed();}}
+function setTema(t){S.tema=t;T=TH[t];document.body.dataset.tema=t;syncAppearance();$$('#tema button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tema===t));
+  if(t==='noche'&&!$('#baseN').src)$('#baseN').src='base_noche.jpg';save();draw();}
+$('#tema').addEventListener('click',e=>{const b=e.target.closest('button');if(b)setTema(b.dataset.tema);});
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,select,textarea'))return;
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return;}
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase(),map={v:'mover',p:'punto',r:'rumbo',d:'demora',e:'enfil',c:'circ',l:'paralela',b:'barco',x:'borrar'};
+  if(map[k])setTool(map[k]);
+  if(k==='escape'){S.pend=[];S.pickDest=false;pop.hidden=true;renderCard();renderBar();draw();}
+  if(k==='+'||k==='=')zoomTo((SW+RL)/2,(SH+RT)/2,1.4);if(k==='-')zoomTo((SW+RL)/2,(SH+RT)/2,1/1.4);
+  if(k.startsWith('arrow')){e.preventDefault();
+    if(S.tool==='barco'&&sim.p){const q=S.simPar;if(q.bCT==='a'){q.bC=nf(simPar().rv,0);q.bCT='v';}if(k==='arrowleft')q.bC=f3((num(q.bC)||0)-5).slice(0,3);if(k==='arrowright')q.bC=f3((num(q.bC)||0)+5).slice(0,3);
+      if(k==='arrowup')q.bV=String(Math.min(30,(num(q.bV)||0)+1));if(k==='arrowdown')q.bV=String(Math.max(0,(num(q.bV)||0)-1));sim.plan=null;save();renderBar();draw();}
+    else{const d=90;inert=null;if(k==='arrowleft')S.view.tx+=d;if(k==='arrowright')S.view.tx-=d;if(k==='arrowup')S.view.ty+=d;if(k==='arrowdown')S.view.ty-=d;applyView();}}
+  if(k===' '&&sim.p&&!sim.msg){e.preventDefault();sim.run=!sim.run;renderBar();}
+  if((k==='delete'||k==='backspace')&&S.sel){push();S.objs=S.objs.filter(o=>o.id!==S.sel);S.sel=null;changed();}
+});
+function showTab(t){$$('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));['trazados','calculos','ejercicios'].forEach(n=>$('#pane-'+n).hidden=n!==t);}
+$$('.tabs button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+
+/* ---------- Condiciones: Ct, viento y corriente en un solo sitio ---------- */
+const ARW=r=>`<svg viewBox="0 0 16 16" aria-hidden="true" style="transform:rotate(${Math.round(r)}deg)"><path d="M8 14V2M4 6l4-4 4 4"/></svg>`;
+const n01=v=>nf(v,isI(v)?0:1);
+function chips(){const c=S.cond,won=!!(c.w&&c.ab>0),con=c.ih>0;
+  $('#chipCt').innerHTML=`<span class="k">Ct</span><b>${sg(Ct())}°</b>${S.ctx?({enf:' enfilación',pol:' Polar',ej:' ejercicio'}[S.ctx.k]):''}`;
+  $('#chipW').innerHTML=won?`${ARW(WDIR[c.w]+180)}<span class="k">Viento</span>${c.w} · abate ${n01(c.ab)}°`:`<span class="k">Viento</span>calma`;
+  $('#chipC').innerHTML=con?`${ARW(c.rc)}<span class="k">Corriente</span>${f3(c.rc)} · ${n01(c.ih)} kn`:`<span class="k">Corriente</span>no hay`;
+  $('#chipW').classList.toggle('off',!won);$('#chipC').classList.toggle('off',!con);}
+function writeCond(){const c=S.cond;$('#dmVal').value=n01(Math.abs(S.dm));$('#dmSig').value=S.dm>0?'1':'-1';$('#dvVal').value=n01(Math.abs(S.dv));$('#dvSig').value=S.dv>0?'1':'-1';
+  $('#wDir').value=c.w||'';$('#wAb').value=n01(c.ab);$('#cRc').value=f3(c.rc).slice(0,3);$('#cIh').value=n01(c.ih);}
+function readCond(){S.dm=(num($('#dmVal').value)||0)*+$('#dmSig').value;S.dv=(num($('#dvVal').value)||0)*+$('#dvSig').value;
+  const c=S.cond;c.w=$('#wDir').value;c.ab=Math.max(0,num($('#wAb').value)||0);const rc=num($('#cRc').value);if(!isNaN(rc))c.rc=norm(rc);c.ih=Math.max(0,num($('#cIh').value)||0);condChanged();}
+function condChanged(){chips();ctDia();convUpd();updCv();save();
+  if(S.cond.ih>0)['rc','ih'].forEach(k=>{const i=$('#tr_'+k);if(i)i.value=k==='rc'?f3(S.cond.rc).slice(0,3):n01(S.cond.ih);});
+  calcAll();renderList();if(sim.dest&&sim.plan)setDest(sim.dest,true);else barLive(true);draw();}
+const pop=$('#pop');
+function openPop(sec){pop.dataset.sec=sec;pop.hidden=false;const r=$('#conds').getBoundingClientRect();pop.style.top=Math.round(r.bottom+8)+'px';
+  pop.style.left=Math.round(Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,r.left)))+'px';
+  const f=pop.querySelector('#sec-'+sec+' input,#sec-'+sec+' select');if(f)f.focus();}
+$('#conds').addEventListener('click',e=>{const b=e.target.closest('[data-pop]');if(!b)return;if(!pop.hidden&&pop.dataset.sec===b.dataset.pop){pop.hidden=true;return;}openPop(b.dataset.pop);});
+$('#popX').onclick=()=>{pop.hidden=true;};
+pop.addEventListener('input',e=>{const id=e.target.id;
+  if(['dmVal','dmSig','dvVal','dvSig'].includes(id)){S.ctx=null;readCond();}
+  else if(['wDir','wAb','cRc','cIh'].includes(id))readCond();
+  else if(id==='cvA'||id==='cvV'){S.cvLast=id;convUpd();}
+  else if(id==='dmYear')calcAll();
+  else ctWays();});
+function ctWays(){const dv=num($('#enDv').value),da=num($('#enDa').value),za=num($('#poZa').value);
+  $('#enCt').textContent=isNaN(dv)||isNaN(da)?'':'= '+sg(n180(dv-da))+'°';$('#poCt').textContent=isNaN(za)?'':'→ Ct '+sg(n180(-za))+'°';}
+pop.addEventListener('click',e=>{const id=e.target.id;
+  if(id==='enUse'){const dv=num($('#enDv').value),da=num($('#enDa').value);if(isNaN(dv)||isNaN(da)){flash('Escribe la Dv medida en la carta y la Da que marcó la aguja.');return;}S.ctx={k:'enf',dv,da,ct:n180(dv-da)};condChanged();}
+  if(id==='poUse'){const za=num($('#poZa').value);if(isNaN(za)){flash('Escribe el azimut de aguja de la Polar.');return;}S.ctx={k:'pol',za,ct:n180(-za)};condChanged();}});
+const c1=v=>f3(v,1).slice(0,-1).replace(/,0$/,'');
+function convUpd(){const ct=Ct(),a=$('#cvA'),v=$('#cvV');
+  if(S.cvLast==='cvV'){const x=num(v.value);a.value=isNaN(x)?'':c1(x-ct);}else{const x=num(a.value);v.value=isNaN(x)?'':c1(x+ct);}
+  $('#cvMid').innerHTML=`${sg(ct)}° →<br>← ${sg(-ct)||'0'}°`;}
+function ctDia(){const ct=Ct(),sc=v=>!v?0:Math.sign(v)*Math.min(30,Math.max(11,Math.abs(v)*2.2)),cx=75,cy=126,L=92;
+  const P=(a,l)=>[(cx+l*Math.sin(rad(a))).toFixed(1),(cy-l*Math.cos(rad(a))).toFixed(1)];
+  const N=[{a:0,n:'Nv',c:'var(--text)'}];let arcs=[];
+  if(S.ctx){const a=sc(ct);N.push({a,n:'Na',c:'var(--mag)'});if(a)arcs.push([0,a,60,'Ct','var(--mag)']);}
+  else{const a1=sc(S.dm),a2=a1+sc(S.dv);N.push({a:a1,n:'Nm',c:'var(--accent)'},{a:a2,n:'Na',c:'var(--mag)'});
+    if(a1)arcs.push([0,a1,44,'dm','var(--accent)']);if(a2!==a1)arcs.push([a1,a2,62,'Δ','var(--mag)']);}
+  let h='';
+  arcs.forEach(([a0,a1,r,t,c])=>{const [x0,y0]=P(a0,r),[x1,y1]=P(a1,r),[tx,ty]=P((a0+a1)/2,r+9);
+    h+=`<path d="M${x0} ${y0}A${r} ${r} 0 0 ${a1>a0?1:0} ${x1} ${y1}" fill="none" stroke="${c}" stroke-width="1.6"/><text x="${tx}" y="${ty}" fill="${c}" font-size="10" text-anchor="middle" dominant-baseline="middle">${t}</text>`;});
+  const seen={};N.forEach(n=>{(seen[n.a]=seen[n.a]||[]).push(n);});
+  Object.values(seen).forEach(g=>{const n=g[g.length-1],[x,y]=P(n.a,L),[tx,ty]=P(n.a,L+11);
+    h+=`<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${n.c}" stroke-width="2" stroke-linecap="round"/><text x="${tx}" y="${ty}" fill="${n.c}" font-size="10.5" font-weight="600" text-anchor="middle" dominant-baseline="middle">${g.map(q=>q.n).join('=')}</text>`;});
+  h+=`<circle cx="${cx}" cy="${cy}" r="3" fill="var(--text)"/>`;$('#ctDia').innerHTML=h;
+  const x=S.ctx;$('#ctSum').innerHTML=x?(x.k==='ej'?`Ct del ejercicio guiado<br><b>Ct ${sg(ct)}°</b>`:x.k==='enf'?`Por enfilación:<br>Ct = Dv − Da = ${fA(x.dv)} − ${fA(x.da)}<br><b>Ct ${sg(ct)}°</b>`:`Por la Polar:<br>Ct = 360° − Za = 360° − ${fA(x.za)}<br><b>Ct ${sg(ct)}°</b>`)
+    :`Ct = dm + desvío<br>= ${sg(S.dm)||'0'}° + (${sg(S.dv)||'0'}°)<br><b>Ct ${sg(ct)}°</b>`;}
+function updCv(){const ct=Ct(),f=(inp,sel,out,A,V)=>{const o=document.getElementById(out);if(!o)return;const x=num(document.getElementById(inp).value);
+    o.textContent=isNaN(x)?'':document.getElementById(sel).value==='a'?`${sg(ct)||'+0'}° = ${V} ${f3(x+ct,1)}`:`= ${A} ${f3(x-ct,1)} con Ct ${sg(ct)||'0'}°`;};
+  f('rC','rCT','rCv','Ra','Rv');f('dB','dBT','dCv','Da','Dv');f('bC','bCT','bCv','Ra','Rv');
+  const n=document.getElementById('exCtNow');if(n)n.textContent=(sg(ct)||'0')+'°';}
+pop.addEventListener('keydown',e=>{if(e.key==='Escape'||(e.key==='Enter'&&e.target.matches('input')))pop.hidden=true;});
+document.addEventListener('pointerdown',e=>{if(!pop.hidden&&!e.target.closest('#pop,#conds,#exCt'))pop.hidden=true;});
+
+/* ---------- Cálculos ---------- */
+const vec=(c,v)=>({e:v*Math.sin(rad(c)),n:v*Math.cos(rad(c))}),vb=v=>norm(deg(Math.atan2(v.e,v.n))),vm=v=>Math.hypot(v.e,v.n);
+function tri(mode,x){
+  if(mode==='a'){const r={e:vec(x.rv,x.vm).e+vec(x.rc,x.ih).e,n:vec(x.rv,x.vm).n+vec(x.rc,x.ih).n};return {rv:x.rv,vm:x.vm,rc:x.rc,ih:x.ih,ref:vb(r),vef:vm(r)};}
+  if(mode==='b'){const u=uv(x.ref),c=vec(x.rc,x.ih),uc=u.e*c.e+u.n*c.n,D=uc*uc-vm(c)**2+x.vm**2;if(D<0)return null;const s=uc+Math.sqrt(D);if(s<=0)return null;
+    const v={e:s*u.e-c.e,n:s*u.n-c.n};return {rv:vb(v),vm:x.vm,rc:x.rc,ih:x.ih,ref:x.ref,vef:s};}
+  if(mode==='c'){const r=vec(x.ref,x.vef),c=vec(x.rc,x.ih),v={e:r.e-c.e,n:r.n-c.n};return {rv:vb(v),vm:vm(v),rc:x.rc,ih:x.ih,ref:x.ref,vef:x.vef};}
+  const r=vec(x.ref,x.vef),v=vec(x.rv,x.vm),c={e:r.e-v.e,n:r.n-v.n};return {rv:x.rv,vm:x.vm,rc:vb(c),ih:vm(c),ref:x.ref,vef:x.vef};
+}
+function lox(la,lo,R,D){const dl=D*Math.cos(rad(R)),A=D*Math.sin(rad(R)),la2=la+dl/60,lm=(la+la2)/2,dL=A/Math.cos(rad(lm));return {la:la2,lo:lo+dL/60,dl,A,lm,dL};}
+function loxInv(la1,lo1,la2,lo2){const dl=(la2-la1)*60,dL=(lo2-lo1)*60,lm=(la1+la2)/2,A=dL*Math.cos(rad(lm));return {dl,dL,lm,A,R:norm(deg(Math.atan2(A,dl))),D:Math.hypot(dl,A)};}
+const TRF={a:[['rv','Rumbo Rv / Rs',135],['vm','Vm',8],['rc','Rc',180],['ih','Ihc',3]],b:[['ref','Rumbo efectivo',90],['vm','Vm',8],['rc','Rc',225],['ih','Ihc',3]],
+ c:[['ref','Rumbo efectivo',90],['vef','Vef',5],['rc','Rc',180],['ih','Ihc',2]],d:[['rv','Rumbo Rv / Rs',135],['vm','Vm',8],['ref','Rumbo efectivo',120],['vef','Vef',9]]};
+function trInputs(){$('#trIn').innerHTML='<div class="row">'+TRF[$('#trMode').value].map(([k,l,v])=>`<label for="tr_${k}">${l}</label><input class="n s" id="tr_${k}" inputmode="decimal" value="${S.cond.ih>0&&k==='rc'?f3(S.cond.rc).slice(0,3):S.cond.ih>0&&k==='ih'?n01(S.cond.ih):v}">`).join('')+'</div>';
+  $$('#trIn input').forEach(i=>i.oninput=calcAll);}
+let trLast=null;
+function calcAll(){
+  const y=num($('#dmYear').value);if(y>1900){const m=-170+7*(y-2005),v=m/60;$('#dmRes').innerHTML=`dm ${Math.round(y)} = <b>${Math.floor(Math.abs(m)/60)}° ${String(Math.round(Math.abs(m)%60)).padStart(2,'0')}' ${m<0?'W':'E'}</b> ≈ ${nf(Math.abs(Math.round(v*2)/2),1)}° ${v<0?'W':'E'}`;$('#dmUse').dataset.v=Math.round(v*2)/2;}
+  {const ct=Ct(),ab=(num($('#rbAb').value)||0)*+$('#rbAbS').value,k=S.ldLast||'ldA',x=num($('#'+k).value);
+   $('#ldOp1').textContent=`↓ + Ct (${sg(ct)||'0'}°)   ·   ↑ − Ct`;$('#ldOp2').textContent=`↓ + abatimiento (${sg(ab)||'0'}°)   ·   ↑ − abatimiento`;
+   const rv=k==='ldA'?x+ct:k==='ldV'?x:x-ab,val={ldA:rv-ct,ldV:rv,ldS:rv+ab};
+   ['ldA','ldV','ldS'].forEach(id=>{if(id!==k)$('#'+id).value=isNaN(x)?'':c1(val[id]);});}
+  const V=num($('#vtdV').value),Tm=num($('#vtdT').value),D=num($('#vtdD').value);let s='Rellena dos datos.';
+  if(!isNaN(V)&&!isNaN(Tm)&&isNaN(D))s=`D = V × t = ${nf(V,1)} × ${nf(Tm,0)}/60 = <b>${nf(V*Tm/60,2)} M</b>`;
+  else if(!isNaN(V)&&isNaN(Tm)&&!isNaN(D)&&V>0)s=`t = D / V = <b>${hm(D/V*60)}</b> (${nf(D/V*60,1)} min)`;
+  else if(isNaN(V)&&!isNaN(Tm)&&!isNaN(D)&&Tm>0)s=`V = D / t = <b>${nf(D/Tm*60,2)} kn</b>`;
+  else if(!isNaN(V)&&!isNaN(Tm)&&!isNaN(D))s='Deja uno de los tres en blanco.';
+  $('#vtdRes').innerHTML=s;
+  const mode=$('#trMode').value,x={};let ok=true;TRF[mode].forEach(([k])=>{x[k]=num($('#tr_'+k).value);if(isNaN(x[k]))ok=false;});
+  trLast=ok?tri(mode,x):null;
+  if(!trLast)$('#trRes').textContent=ok?'Sin solución: la corriente supera a la velocidad del barco.':'Rellena los cuatro datos.';
+  else{const t=trLast,B=(k,s)=>TRF[mode].some(f=>f[0]===k)?s:'<b>'+s+'</b>';
+    $('#trRes').innerHTML=`Rv/Rs ${B('rv',f3(t.rv,1))} · Vm ${B('vm',nf(t.vm,2)+' kn')}<br>Rc ${B('rc',f3(t.rc,1))} · Ihc ${B('ih',nf(t.ih,2)+' kn')}<br>Ref ${B('ref',f3(t.ref,1))} · Vef ${B('vef',nf(t.vef,2)+' kn')}<br>Ra = Rv − Ct = ${f3(t.rv-Ct(),1)}`;}
+  const la=(num($('#lxLaD').value)+num($('#lxLaM').value)/60)*+$('#lxLaS').value,lo=(num($('#lxLoD').value)+num($('#lxLoM').value)/60)*+$('#lxLoS').value,R=num($('#lxR').value),Dd=num($('#lxD').value);
+  if([la,lo,R,Dd].some(isNaN))$('#lxRes').textContent='Rellena salida, rumbo y distancia.';
+  else{const q=lox(la,lo,R,Dd);$('#lxRes').innerHTML=`Δl = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} · A = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}<br>lm = ${fLat(q.lm)} · ΔL = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}<br>Llegada: <b>${fLat(q.la)} · ${fLon(q.lo)}</b>`;}
+}
+function triObjs(p,t,x){const tip=dest(p,t.rc,t.ih),q=dest(p,t.ref,t.vef);return [mkSeg(p,tip,'rc',x),mkSeg(tip,q,'rv',x),mkSeg(p,q,'ref',x)];}
+$('#trMode').onchange=()=>{trInputs();calcAll();};
+['ldA','ldV','ldS'].forEach(i=>$('#'+i).addEventListener('input',()=>{S.ldLast=i;calcAll();}));
+['rbAb','rbAbS','vtdV','vtdT','vtdD','lxLaD','lxLaM','lxLaS','lxLoD','lxLoM','lxLoS','lxR','lxD'].forEach(i=>$('#'+i).addEventListener('input',calcAll));
+$('#dmUse').onclick=()=>{S.dm=+$('#dmUse').dataset.v||0;S.ctx=null;writeCond();condChanged();};
+$('#trDraw').onclick=()=>{const o=S.objs.find(o=>o.id===S.sel&&o.t==='pt')||[...S.objs].reverse().find(o=>o.t==='pt');
+  if(!trLast){flash('Completa primero los datos del triángulo.');return;}
+  if(!o){flash('Sitúa antes un punto en la carta: el triángulo se traza desde él.');return;}
+  push();triObjs(o.p,trLast).forEach(add);changed();flash('Triángulo trazado desde '+(o.label||'el punto')+'.');};
+
+/* ---------- Ejercicios ---------- */
+const rnd=(a,b)=>a+Math.random()*(b-a),rint=(a,b)=>Math.floor(rnd(a,b+1)),pk=a=>a[Math.floor(Math.random()*a.length)];
+const SEA=[[50,67,357,374,3],[55.5,58.5,327,350,2],[57,64,312,320,1]];
+function randSea(){const pool=[];SEA.forEach(b=>{for(let i=0;i<b[4];i++)pool.push(b)});const b=pk(pool);return PL(35+rnd(b[0],b[1])/60,-rnd(b[2],b[3])/60);}
+const inSea=p=>{const la=(latOf(p)-35)*60,lo=-lonOf(p)*60;return SEA.some(b=>la>=b[0]&&la<=b[1]&&lo>=b[2]&&lo<=b[3])&&!isLand(p);};
+function around(P,dmin,dmax,keys){return (keys||MAIN).map(k=>({k,lm:LM[k],d:dist(P,LM[k].p),b:brg(P,LM[k].p)})).filter(x=>x.d>=dmin&&x.d<=dmax);}
+function pairFrom(P,smin,smax,dmin,dmax){const c=around(P,dmin,dmax),pairs=[];for(let i=0;i<c.length;i++)for(let j=i+1;j<c.length;j++){const s=Math.abs(n180(c[i].b-c[j].b));if(s>=smin&&s<=smax)pairs.push([c[i],c[j]]);}return pairs.length?pk(pairs):null;}
+const WIND={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315},WN={N:'norte',NE:'nordeste',E:'levante (este)',SE:'sudeste',S:'sur',SW:'sudoeste',W:'poniente (oeste)',NW:'noroeste'};
+const abSign=(w,rs)=>norm(WIND[w]-rs)<180?-1:1;
+const CARD={0:'N/v',45:'NE/v',90:'E/v',135:'SE/v',180:'S/v',225:'SW/v',270:'W/v',315:'NW/v'};
+const DMN="La declinación se actualiza con la leyenda de la carta (2° 50' W 2005, 7' E anual): en 2026, 2° 50' − 21 × 7' = 0° 23' W ≈ 0,4° W. ";
+const ctOf=o=>o.ct!=null?o.ct:o.dm+o.dv;
+const ctTxt=o=>o.ct!=null?`Ct = ${sg(o.ct)}°`:(o.dmNote?`desvío = ${fEW(o.dv)} (dm según la leyenda de la carta para 2026)`:`dm = ${fEW(o.dm)}, desvío = ${fEW(o.dv)}`);
+const ctStep=o=>o.ct!=null?`Ct = ${sg(o.ct)}°.`:(o.dmNote?DMN:'')+`Ct = dm + desvío = ${sg(o.dm)}° + (${sg(o.dv)}°) = ${sg(o.dm+o.dv)}°.`;
+const X={sol:true},XA=ag=>({sol:true,ag});
+const aPos=p=>({t:'pos',label:'Situación',p});
+const aNum=(label,v,tol,unit,circ)=>({t:'num',label,v,tol,unit,circ});
+
+const EX={
+ ct(o){const A=LM[o.a],B=LM[o.b],obs=LM[o.obs];const Dv=Math.round(o.modo==='enf'?brg(A.p,B.p):(o.obs===o.a?brg(B.p,A.p):brg(A.p,B.p))),ct=n180(Dv-o.Da);
+  return {tipo:'Corrección total',html:`Situados en la ${o.modo==='enf'?'enfilación':'oposición'} de <b>${A.name}</b> con <b>${B.name}</b>, se toma demora de aguja a ${obs.name}: Da = ${f3(o.Da)}. Calcula la corrección total.`,
+   ans:[aNum('Ct',ct,1,'°')],pasos:[`Traza la línea que une ${A.name} y ${B.name}.`,`Sobre ella, la demora verdadera a ${obs.name} es Dv = ${f3(Dv)}.`,`Ct = Dv − Da = ${Dv} − ${o.Da} = ${sg(ct)}°.`],
+   res:`Ct = ${sg(ct)}°`,draw:()=>[mkLine(A.p,brg(A.p,B.p),A.name+' – '+B.name,X)]};},
+ rumbo(o){const A=LM[o.a],B=LM[o.b],rs=brg(A.p,B.p),d=dist(A.p,B.p),ct=ctOf(o),ab=o.ab?o.ab*abSign(o.w,rs):0,rv=rs-ab,ra=rv-ct;
+  const pasos=[`Une ${A.name} con ${B.name} y mide: ${o.ab?'Rs':'Rv'} = ${f3(rs,1)}, distancia = ${nf(d,1)} M.`];
+  if(o.ab)pasos.push(`El viento del ${WN[o.w]} entra por ${ab>0?'babor':'estribor'} y abate a ${ab>0?'estribor (+)':'babor (−)'}: Rv = Rs − (${sg(ab)}°) = ${f3(rv,1)}.`);
+  pasos.push(ctStep(o),`Ra = Rv − Ct = ${f3(rv,1)} − (${sg(ct)}°) = ${f3(ra,1)}.`);
+  return {tipo:'Rumbo y distancia',html:`Desde <b>${A.name}</b> se quiere navegar hasta <b>${B.name}</b>. ${ctTxt(o)}${o.ab?`. Sopla viento del ${WN[o.w]} que abate ${o.ab}°`:''}. Calcula el rumbo de aguja${o.noD?'':' y la distancia'}.`,
+   ans:o.noD?[aNum('Ra',norm(ra),2,'°',true)]:[aNum('Ra',norm(ra),2,'°',true),aNum('Distancia',d,.3,'M')],pasos,res:`Ra = ${f3(ra,1)} · distancia = ${nf(d,1)} M`,draw:()=>[mkSeg(A.p,B.p,'rv',X)]};},
+ demoras(o){const A=LM[o.a],B=LM[o.b],ct=o.aguja?o.dm+o.dv:0,dva=o.da+ct,dvb=o.db+ct,P=interLL(A.p,dva+180,B.p,dvb+180);
+  const pasos=[];if(o.aguja)pasos.push(ctStep(o),`Dv ${A.name} = ${f3(o.da)} ${sg(ct)}° = ${f3(dva)} · Dv ${B.name} = ${f3(o.db)} ${sg(ct)}° = ${f3(dvb)}.`);
+  pasos.push(`Demoras opuestas: desde ${A.name} al ${f3(dva+180)} y desde ${B.name} al ${f3(dvb+180)}.`,`El corte de las dos líneas es la situación: ${fPos(P)}.`);
+  const D=o.aguja?'Da':'Dv';
+  return {tipo:o.aguja?'Situación por demoras de aguja':'Situación por demoras verdaderas',html:`Se toman simultáneamente ${D} a <b>${A.name}</b> = ${f3(o.da)} y ${D} a <b>${B.name}</b> = ${f3(o.db)}${o.aguja?'. '+ctTxt(o):''}. Calcula la situación.`,
+   ans:[aPos(P)],pasos,res:fPos(P),draw:()=>[mkRay(A.p,dva+180,A.name,o.aguja?XA(o.da):X),mkRay(B.p,dvb+180,B.name,o.aguja?XA(o.db):X),mkPt(P,'S',X)]};},
+ distancias(o){const A=LM[o.a],B=LM[o.b],pts=inter(geom(mkCirc(A.p,o.da)),geom(mkCirc(B.p,o.db)));
+  const key={N:p=>-p.n,S:p=>p.n,E:p=>-p.e,W:p=>p.e}[o.lado];pts.sort((p,q)=>key(p)-key(q));const P=pts[0];
+  return {tipo:'Situación por distancias',html:`Por radar se miden ${nf(o.da,1)} M a <b>${A.name}</b> y ${nf(o.db,1)} M a <b>${B.name}</b>. Calcula la situación (de los dos cortes, el que queda más al ${{N:'norte',S:'sur',E:'este',W:'oeste'}[o.lado]}).`,
+   ans:[aPos(P)],pasos:[`Con el compás toma ${nf(o.da,1)} M en la escala de latitudes y traza el arco con centro en ${A.name}.`,`Haz lo mismo con ${nf(o.db,1)} M desde ${B.name}.`,`El corte de los dos arcos es la situación: ${fPos(P)}.`],
+   res:fPos(P),draw:()=>[mkCirc(A.p,o.da,A.name,X),mkCirc(B.p,o.db,B.name,X),mkPt(P,'S',X)]};},
+ lineas(o){const A=LM[o.a],B=LM[o.b];let P,html,pasos,objs=[mkLine(A.p,brg(A.p,B.p),A.name+' – '+B.name,X)];
+  if(o.c2){const C=LM[o.c2],D=LM[o.d2];P=interLL(A.p,brg(A.p,B.p),C.p,brg(C.p,D.p));objs.push(mkLine(C.p,brg(C.p,D.p),C.name+' – '+D.name,X));
+    html=`Situados en la oposición de <b>${A.name}</b> con <b>${B.name}</b> y, a la vez, en la oposición de <b>${C.name}</b> con <b>${D.name}</b>. Calcula la situación.`;
+    pasos=[`Une ${A.name} con ${B.name}.`,`Une ${C.name} con ${D.name}.`,`El corte de las dos oposiciones es la situación: ${fPos(P)}.`];}
+  else{const C=LM[o.c];P=interLL(A.p,brg(A.p,B.p),C.p,o.dv+180);objs.push(mkRay(C.p,o.dv+180,C.name,X));
+    html=`Situados en la oposición de <b>${A.name}</b> con <b>${B.name}</b>, se toma Dv a <b>${C.name}</b> = ${f3(o.dv)}. Calcula la situación.`;
+    pasos=[`Une ${A.name} con ${B.name}: es la primera línea de posición.`,`Traza desde ${C.name} la demora opuesta, ${f3(o.dv+180)}.`,`El corte es la situación: ${fPos(P)}.`];}
+  objs.push(mkPt(P,'S',X));return {tipo:'Situación por oposición',html,ans:[aPos(P)],pasos,res:fPos(P),draw:()=>objs};},
+ enfDem(o){const A=LM[o.a],B=LM[o.b],C=LM[o.c],le=brg(A.p,B.p),dvE=Math.round(le*2)/2,ct=n180(dvE-o.daA),dvC=norm(o.daC+ct),P=interLL(A.p,le,C.p,dvC+180);
+  return {tipo:'Situación por enfilación y demora',html:`Al pasar por la enfilación de <b>${A.name}</b> y <b>${B.name}</b> se toman a la vez Da a ${A.name} = ${f3(o.daA)} y Da a <b>${C.name}</b> = ${f3(o.daC)}. Calcula la situación.`,
+   ans:[aPos(P)],pasos:[`Traza la enfilación: une ${B.name} con ${A.name} y prolonga hacia la mar. Sobre ella, Dv a ${A.name} = ${fA(dvE)}.`,`La enfilación da la corrección total: Ct = Dv − Da = ${fA(dvE)} − ${f3(o.daA)} = ${sg(ct)}°.`,`Dv a ${C.name} = ${f3(o.daC)} ${sg(ct)}° = ${fA(dvC)}; traza desde ${C.name} la opuesta, ${fA(dvC+180)}.`,`El corte con la enfilación es la situación: ${fPos(P)}.`],
+   res:fPos(P),draw:()=>[mkLine(A.p,le,A.name+' – '+B.name,X),mkRay(C.p,dvC+180,C.name,XA(o.daC)),mkPt(P,'S',X)]};},
+ enfDist(o){const A=LM[o.a],B=LM[o.b],c=brg(B.p,A.p),P=dest(A.p,c,o.d);
+  return {tipo:'Situación por enfilación y distancia',html:`Al pasar por la enfilación de <b>${A.name}</b> y <b>${B.name}</b> se mide una distancia de ${nf(o.d,1)} M a ${A.name}. Calcula la situación.`,
+   ans:[aPos(P)],pasos:[`Une ${B.name} con ${A.name} y prolonga la línea más allá de ${A.name}: en la enfilación se ve ${A.name} delante y ${B.name} detrás.`,`Con el compás abierto ${nf(o.d,1)} M y centro en ${A.name}, corta la prolongación.`,`Ese corte es la situación: ${fPos(P)}.`],
+   res:fPos(P),draw:()=>[mkLine(A.p,c,A.name+' – '+B.name,X),mkCirc(A.p,o.d,A.name,X),mkPt(P,'S',X)]};},
+ demDist(o){const L=LM[o.lm],ct=n180(-o.za),dv=norm(o.da+ct),P=dest(L.p,dv+180,o.d);
+  return {tipo:'Situación por demora y distancia',html:`Se toman a la vez distancia a <b>${L.name}</b> = ${nf(o.d,1)} M, Da a ese faro = ${f3(o.da)} y azimut de aguja de la estrella Polar Za = ${f3(o.za)}. Calcula la situación.`,
+   ans:[aPos(P)],pasos:[`La Polar está prácticamente en el norte verdadero (Zv = 000°): Ct = Zv − Za = 360 − ${o.za} = ${sg(ct)}°.`,`Dv = Da + Ct = ${f3(o.da)} ${sg(ct)}° = ${f3(dv)}; la opuesta desde el faro es ${f3(dv+180)}.`,`Sobre la opuesta lleva ${nf(o.d,1)} M desde ${L.name}: ${fPos(P)}.`],
+   res:fPos(P),draw:()=>[mkRay(L.p,dv+180,L.name,XA(o.da)),mkCirc(L.p,o.d,L.name,X),mkPt(P,'S',X)]};},
+ pasar(o){const L=LM[o.lm],g=geom(mkCirc(L.p,o.d)),ts=tangents(o.p,g),key={N:p=>-p.n,S:p=>p.n,E:p=>-p.e,W:p=>p.e}[o.side];ts.sort((p,q)=>key(p)-key(q));
+  const Tg=ts[0],rs=brg(o.p,Tg),ab=o.ab?o.ab*abSign(o.w,rs):0,rv=rs-ab,ct=ctOf(o),ra=rv-ct;
+  const pasos=[`Con el compás abierto ${nf(o.d,1)} M traza un círculo con centro en ${L.name}.`,`Desde la situación traza la tangente al círculo por el lado de la mar y mide: ${o.ab?'Rs':'Rv'} = ${f3(rs,1)}.`];
+  if(o.ab)pasos.push(`El viento del ${WN[o.w]} entra por ${ab>0?'babor':'estribor'} y abate a ${ab>0?'estribor (+)':'babor (−)'}: Rv = Rs − (${sg(ab)}°) = ${f3(rv,1)}.`);
+  pasos.push(ctStep(o)+` Ra = Rv − Ct = ${f3(rv,1)} − (${sg(ct)}°) = ${f3(ra,1)}.`);
+  return {tipo:'Rumbo para pasar a distancia',html:`Desde ${fPos(o.p)} se da rumbo a pasar a ${nf(o.d,1)} M de <b>${L.name}</b>, dejándolo al ${{N:'sur',S:'norte',E:'oeste',W:'este'}[o.side]}${o.ab?`. El viento es de ${WN[o.w]} y abate ${o.ab}°`:''}. ${ctTxt(o)}. Calcula el rumbo de aguja.`,
+   ans:[aNum('Ra',norm(ra),2,'°',true)],pasos,res:`Ra = ${f3(ra,1)}`,draw:()=>[mkPt(o.p,'A',X),mkCirc(L.p,o.d,L.name,X),mkSeg(o.p,dest(o.p,rs,dist(o.p,Tg)+3),'rv',X)]};},
+ marc(o){const A=LM[o.a],B=LM[o.b],ct=o.dm+o.dv,rv=o.ra+ct,dva=norm(rv+o.ma*o.sa),dvb=norm(rv+o.mb*o.sb),P=interLL(A.p,dva+180,B.p,dvb+180),bd=s=>s>0?'Er':'Br';
+  return {tipo:'Situación por marcaciones',html:`Navegando al Ra = ${f3(o.ra)} se toman simultáneamente marcación ${o.ma}° ${bd(o.sa)} a <b>${A.name}</b> y marcación ${o.mb}° ${bd(o.sb)} a <b>${B.name}</b>. ${ctTxt(o)}. Calcula la situación.`,
+   ans:[aPos(P)],pasos:[ctStep(o),`Rv = Ra + Ct = ${fA(rv)}.`,`Dv ${A.name} = Rv ${o.sa>0?'+':'−'} ${o.ma}° = ${fA(dva)} · Dv ${B.name} = Rv ${o.sb>0?'+':'−'} ${o.mb}° = ${fA(dvb)}.`,`Traza las opuestas (${f3(dva+180)} y ${f3(dvb+180)}); el corte es la situación: ${fPos(P)}.`],
+   res:fPos(P),draw:()=>[mkRay(A.p,dva+180,A.name,o.aguja?XA(o.da):X),mkRay(B.p,dvb+180,B.name,o.aguja?XA(o.db):X),mkPt(P,'S',X)]};},
+ corrRef(o){const ct=o.dm+o.dv,rv=o.ra+ct,t=tri('a',{rv,vm:o.vm,rc:o.rc,ih:o.ih});
+  return {tipo:'Corriente conocida: rumbo efectivo',html:`Situados en ${fPos(o.p)}, se gobierna al Ra = ${f3(o.ra)} con Vm = ${nf(o.vm,0)} kn. ${ctTxt(o)}. Hay una corriente de Rc = ${f3(o.rc)} e Ihc = ${nf(o.ih,1)} kn. Calcula el rumbo efectivo y la velocidad efectiva.`,
+   ans:[aNum('Ref',t.ref,2,'°',true),aNum('Vef',t.vef,.3,'kn')],pasos:[ctStep(o)+` Rv = Ra + Ct = ${f3(rv)}.`,`Desde la situación traza la corriente: Rc ${f3(o.rc)} y ${nf(o.ih,1)} M (una hora).`,`Desde el extremo de la corriente traza el Rv ${f3(rv)} y lleva sobre él ${nf(o.vm,0)} M.`,`Une la situación con ese extremo: Ref = ${f3(t.ref,1)} y su longitud es Vef = ${nf(t.vef,1)} kn.`],
+   res:`Ref = ${f3(t.ref,1)} · Vef = ${nf(t.vef,1)} kn`,draw:()=>[mkPt(o.p,'A',X),...triObjs(o.p,t,X)],sim:{p:o.p,ra:o.ra,dm:o.dm,dv:o.dv,vm:o.vm,rc:o.rc,ih:o.ih}};},
+ corrRumbo(o){const L=LM[o.lm],P0=o.from?LM[o.from].p:o.p,T2=o.card==null?L.p:dest(L.p,o.card,o.d),ref=brg(P0,T2),D=dist(P0,T2),t=tri('b',{ref,vm:o.vm,rc:o.rc,ih:o.ih}),ct=o.rvOnly?0:ctOf(o),ra=t.rv-ct,min=D/t.vef*60;
+  const dst=o.card==null?`<b>${L.name}</b>`:`un punto situado ${nf(o.d,0)} M al ${CARD[o.card]} de <b>${L.name}</b>`,tip=dest(P0,o.rc,o.ih),org=o.from?`Desde <b>${LM[o.from].name}</b>`:`Situados en ${fPos(P0)},`;
+  const pasos=[`Une la salida con el destino: es el rumbo efectivo, Ref = ${f3(ref,1)}, distancia ${nf(D,1)} M.`,`Desde la salida traza la corriente: Rc ${f3(o.rc)} y ${nf(o.ih,1)} M.`,`Con el compás abierto ${nf(o.vm,0)} M (Vm) y centro en el extremo de la corriente, corta el rumbo efectivo.`,`Del extremo de la corriente a ese corte: Rv = ${f3(t.rv,1)}. De la salida al corte: Vef = ${nf(t.vef,1)} kn.`];
+  if(!o.rvOnly)pasos.push(ctStep(o)+` Ra = Rv − Ct = ${f3(ra,1)}.`);pasos.push(`Tiempo = ${nf(D,1)} / ${nf(t.vef,1)} = ${hm(min)}.`);
+  return {tipo:'Corriente conocida: rumbo a gobernar',html:`${org} se quiere ir a ${dst} con Vm = ${nf(o.vm,0)} kn. Hay una corriente de Rc = ${f3(o.rc)} e Ihc = ${nf(o.ih,1)} kn. ${o.rvOnly?'Calcula el rumbo verdadero y la velocidad efectiva.':ctTxt(o)+'. Calcula el rumbo de aguja, la velocidad efectiva y el tiempo que se tarda.'}`,
+   ans:o.rvOnly?[aNum('Rv',t.rv,2,'°',true),aNum('Vef',t.vef,.3,'kn')]:[aNum('Ra',norm(ra),2,'°',true),aNum('Vef',t.vef,.3,'kn'),aNum('Tiempo',min,4,'min')],pasos,
+   res:(o.rvOnly?`Rv = ${f3(t.rv,1)}`:`Ra = ${f3(ra,1)}`)+` · Vef = ${nf(t.vef,1)} kn · ${hm(min)}`,draw:()=>[mkPt(P0,'A',X),mkSeg(P0,T2,'ref',X),mkSeg(P0,tip,'rc',X),mkCirc(tip,o.vm,'',X),mkSeg(tip,dest(P0,ref,t.vef),'rv',X)],sim:{p:P0,dest:T2,vm:o.vm,rc:o.rc,ih:o.ih,dm:o.rvOnly?0:(o.ct!=null?o.ct:o.dm),dv:o.rvOnly||o.ct!=null?0:o.dv}};},
+ corrDesc(o){const L=o.lm?LM[o.lm]:null,L0=o.lm0?LM[o.lm0]:null,P0=L0?dest(L0.p,o.dv0+180,o.d0):o.p,ct=o.rv!=null?0:ctOf(o),rv=o.rv!=null?o.rv:o.ra+ct,dn=o.vm*o.t/60,Se=dest(P0,rv,dn),So=o.so||dest(L.p,o.dvl+180,o.dl),rc=brg(Se,So),der=dist(Se,So),ih=der*60/o.t;
+  const ini=L0?`se toma Dv a <b>${L0.name}</b> = ${f3(o.dv0)} y distancia ${nf(o.d0,1)} M`:`situados en ${fPos(P0)}`,crs=o.rv!=null?`Rv = ${f3(o.rv)}`:`Ra = ${f3(o.ra)}`;
+  const fin=o.so?`el GPS da ${fPos(So)}`:`se toma Dv a <b>${L.name}</b> = ${f3(o.dvl)} y distancia ${nf(o.dl,1)} M`;
+  const pasos=[];if(L0)pasos.push(`Situación de salida: demora opuesta ${f3(o.dv0+180)} desde ${L0.name} y ${nf(o.d0,1)} M sobre ella: ${fPos(P0)}.`);
+  if(o.rv==null)pasos.push(ctStep(o)+` Rv = ${f3(rv)}.`);
+  pasos.push(`Distancia navegada: ${nf(o.vm,0)} kn × ${o.t} min = ${nf(dn,1)} M. Llévala sobre el Rv ${f3(rv)} desde la salida: situación estimada Se.`,o.so?`Sitúa en la carta la situación observada So que da el GPS.`:`Situación observada So: demora opuesta ${f3(o.dvl+180)} desde ${L.name} y ${nf(o.dl,1)} M sobre ella.`,`Une Se con So y mide desde Se: Rc = ${f3(rc)}; deriva = ${nf(der,2)} M en ${o.t} min.`,`Ihc = ${nf(der,2)} × 60 / ${o.t} = ${nf(ih,1)} kn.`);
+  const objs=[mkPt(P0,'A',X),mkSeg(P0,Se,'rv',o.rv!=null?X:XA(o.ra)),mkPt(Se,'Se',X)];if(L0)objs.unshift(mkRay(L0.p,o.dv0+180,L0.name,X));if(!o.so)objs.push(mkRay(L.p,o.dvl+180,L.name,X));objs.push(mkPt(So,'So',X),mkSeg(Se,So,'rc',X),mkSeg(P0,So,'ref',X));
+  return {tipo:'Corriente desconocida',html:`A HRB ${o.h0} ${ini}. Se navega al ${crs} con Vm = ${nf(o.vm,0)} kn${o.rv!=null?'':' ('+ctTxt(o)+')'}. A HRB ${o.h1} ${fin}. Calcula el rumbo y la intensidad horaria de la corriente.`,
+   ans:[aNum('Rc',rc,6,'°',true),aNum('Ihc',ih,.3,'kn')],pasos,res:`Rc = ${f3(rc)} · Ihc = ${nf(ih,1)} kn`,draw:()=>objs};},
+ traslado(o){const L=LM[o.lm],L2=LM[o.lm2||o.lm],ct=o.verd?0:ctOf(o),rv=(o.verd?o.rv:o.ra)+ct,dv1=norm(o.b1+ct),dv2=norm(o.b2+ct),dn=o.vm*o.t/60,Tp=dest(L.p,rv,dn),P=interLL(Tp,dv1,L2.p,dv2+180),D=o.verd?'Dv':'Da';
+  const pasos=[];if(!o.verd)pasos.push(ctStep(o)+` Rv = ${f3(rv)} · Dv1 = ${f3(dv1)} · Dv2 = ${f3(dv2)}.`);
+  pasos.push(`Traza la primera demora opuesta, ${f3(dv1+180)}, desde ${L.name}${L2===L?` y la segunda, ${f3(dv2+180)}, desde el mismo faro`:`, y la segunda, ${f3(dv2+180)}, desde ${L2.name}`}.`,`Distancia navegada: ${nf(o.vm,0)} kn × ${o.t} min = ${nf(dn,1)} M. Llévala desde ${L.name} sobre el Rv ${f3(rv)}.`,`Por ese extremo traza una paralela a la primera demora. Donde corta a la segunda está la situación: ${fPos(P)}.`);
+  return {tipo:'Traslado de demora',html:`Navegando al ${o.verd?'Rv':'Ra'} = ${f3(o.verd?o.rv:o.ra)} con Vm = ${nf(o.vm,0)} kn${o.verd?'':' ('+ctTxt(o)+')'}, a HRB ${o.h0} se toma ${D} a <b>${L.name}</b> = ${f3(o.b1)}. A HRB ${o.h1} ${o.b2txt||`se toma ${D} a ${L2===L?'ese mismo faro':'<b>'+L2.name+'</b>'} = ${f3(o.b2)}`}. Calcula la situación a HRB ${o.h1}.`,
+   ans:[aPos(P)],pasos,res:fPos(P),draw:()=>[mkRay(L.p,dv1+180,L.name,o.verd?X:XA(o.b1)),mkRay(L2.p,dv2+180,L2.name,o.verd?X:XA(o.b2)),mkSeg(L.p,Tp,'rv',o.verd?X:XA(o.ra)),mkLine(Tp,dv1,'',Object.assign({kindName:'Paralela',dash:true},X)),mkPt(P,'S',X)]};},
+ estima(o){const L=LM[o.lm],P0=dest(L.p,o.card,o.d);let p=P0;const objs=[mkPt(P0,'A',X)],pasos=[`Salida: ${nf(o.d,0)} M al ${CARD[o.card]} de ${L.name}.`];
+  o.legs.forEach((g,i)=>{const ct=o.dm+g.dv,rv=g.ra+ct,dn=g.v*g.t/60,q=dest(p,rv,dn);pasos.push(`Tramo ${i+1}: Ct = ${sg(ct)}°, Rv = ${f3(rv)}, distancia = ${nf(g.v,0)} × ${g.t}/60 = ${nf(dn,1)} M.`);objs.push(mkSeg(p,q,'rv',XA(g.ra)));p=q;});
+  objs.push(mkPt(p,'Se',X));pasos.push(`Situación de estima al final: ${fPos(p)}.`);
+  return {tipo:'Estima gráfica',html:`A HRB ${o.h0}, situados ${nf(o.d,0)} M al ${CARD[o.card]} de <b>${L.name}</b>, dm = ${fEW(o.dm)}. `+o.legs.map((g,i)=>`${i?'Después se':'Se'} navega ${g.t} min al Ra = ${f3(g.ra)} (desvío ${fEW(g.dv)}) a ${nf(g.v,0)} kn.`).join(' ')+` Sin viento ni corriente, calcula la situación de estima final.`,
+   ans:[aPos(p)],pasos,res:fPos(p),draw:()=>objs};},
+ estimaC(o){const ct=ctOf(o),rv=o.ra+ct,ab=o.ab?o.ab*abSign(o.w,rv):0,rs=rv+ab,dn=o.vm*o.t/60,A=dest(o.p,rs,dn),dc=o.ih*o.t/60,P=dest(A,o.rc,dc);
+  const pasos=[ctStep(o)+` Rv = Ra + Ct = ${fA(rv)}.`];if(o.ab)pasos.push(`El viento del ${WN[o.w]} entra por ${ab>0?'babor':'estribor'} y abate a ${ab>0?'estribor (+)':'babor (−)'}: Rs = Rv ${sg(ab)}° = ${fA(rs)}.`);
+  pasos.push(`Desde la salida traza el ${o.ab?'Rs':'Rv'} y lleva ${nf(o.vm,0)} kn × ${o.t} min = ${nf(dn,1)} M.`,`Desde ese extremo traza la corriente: Rc ${f3(o.rc)} y ${nf(o.ih,1)} kn × ${o.t} min = ${nf(dc,1)} M.`,`El extremo de la corriente es la situación: ${fPos(P)}.`);
+  return {tipo:'Estima con viento y corriente',html:`A HRB ${o.h0}, situados en ${fPos(o.p)}, se navega al Ra = ${f3(o.ra)} con Vm = ${nf(o.vm,0)} kn. ${ctTxt(o)}${o.ab?`. Viento de ${WN[o.w]} que abate ${o.ab}°`:''}. Corriente de Rc = ${f3(o.rc)} e Ihc = ${nf(o.ih,1)} kn. Calcula la situación a HRB ${o.h1}.`,
+   ans:[aPos(P)],pasos,res:fPos(P),draw:()=>[mkPt(o.p,'A',X),mkSeg(o.p,A,'rv',X),mkSeg(A,P,'rc',X),mkSeg(o.p,P,'ref',X),mkPt(P,'S',X)],sim:{p:o.p,ra:o.ra,dm:o.ct!=null?o.ct:o.dm,dv:o.ct!=null?0:o.dv,vm:o.vm,w:o.w,ab:o.ab,rc:o.rc,ih:o.ih,h0:o.h0}};},
+ loxDir(o){const D=o.v*o.h,q=lox(o.lat,o.lon,o.rd,D),res=`l = ${fLat(q.la)} · L = ${fLon(q.lo)}`;
+  return {tipo:'Estima analítica',html:`A HRB ${o.h0}, en l = ${fLat(o.lat)} · L = ${fLon(o.lon)}, se navega al rumbo directo Rd = ${f3(o.rd)} con velocidad efectiva de ${nf(o.v,1)} kn. Calcula la situación a HRB ${o.h1}. Queda fuera de la carta: se resuelve por estima analítica.`,
+   ans:[aNum('l (minutos)',(q.la-Math.floor(q.la))*60,.3,"' N de "+Math.floor(q.la)+'°'),aNum('L (minutos)',(Math.abs(q.lo)-Math.floor(Math.abs(q.lo)))*60,.4,"' W de "+Math.floor(Math.abs(q.lo))+'°')],
+   pasos:[`Distancia = ${nf(o.v,1)} kn × ${o.h} h = ${nf(D,1)} M.`,`Δl = D · cos R = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} → l = ${fLat(q.la)}.`,`A = D · sen R = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}; latitud media lm = ${fLat(q.lm)}.`,`ΔL = A / cos lm = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'} → L = ${fLon(q.lo)}.`],res,draw:()=>[]};},
+ loxInv(o){const q=loxInv(o.la1,o.lo1,o.la2,o.lo2),qd=(Math.abs(n180(q.R))>90?'S':'N')+nf(Math.min(q.R%180,180-q.R%180),1)+'°'+(q.R>180?'W':'E');
+  return {tipo:'Estima analítica',html:`Salida en l = ${fLat(o.la1)} · L = ${fLon(o.lo1)} y llegada en l' = ${fLat(o.la2)} · L' = ${fLon(o.lo2)}. Calcula ${o.ask==='d'?'la distancia directa':'el rumbo directo'}.`,
+   ans:o.ask==='d'?[aNum('Distancia',q.D,.5,'M')]:[aNum('Rd',q.R,1.5,'°',true)],
+   pasos:[`Δl = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} · ΔL = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'} · latitud media lm = ${fLat(q.lm)}.`,`Apartamiento A = ΔL · cos lm = ${nf(Math.abs(q.A),1)}'.`,Math.abs(q.dl)<.05?`Misma latitud: el rumbo es ${f3(q.R)} y la distancia es el apartamiento, ${nf(q.D,1)} M.`:`tg R = A / Δl = ${nf(Math.abs(q.A/q.dl),3)} → R = ${qd} = ${f3(q.R)}. Distancia = Δl / cos R = ${nf(q.D,1)} M.`],
+   res:`Rd = ${f3(q.R)} · D = ${nf(q.D,1)} M`,draw:()=>[]};},
+ info(o){return {tipo:o.tipo,html:o.html,ans:[],pasos:o.pasos,res:o.res,draw:()=>[]};}
+};
+function tryGen(f,fb){for(let i=0;i<400;i++){const r=f();if(r)return r;}return fb;}
+const OPP=[['cires','tarifa'],['alcazar','carnero'],['alcazar','tarifa'],['malabata','paloma'],['malabata','gracia'],['espartel','trafalgar'],['almina','europa'],['cires','carnero'],['malabata','tarifa'],['espartel','gracia']];
+const DEST=[['tarifa',180,2],['europa',180,2],['almina',0,2],['cires',0,2],['malabata',0,3],['espartel',315,4],['trafalgar',180,5],['gracia',270,3],['paloma',180,3],['alcazar',0,2],['carnero',90,2]];
+const rCt=()=>({dm:-rint(0,5),dv:pk([-4,-3,-2,-1,1,2,3,4])});
+const GEN={
+ ct:()=>{const [a,b]=pk(OPP),modo='opo',obs=pk([a,b]),ct=pk([-9,-7,-6,-5,-4,-3,-2,2,3,4,5,6]),Dv=Math.round(obs===a?brg(LM[b].p,LM[a].p):brg(LM[a].p,LM[b].p));return ['ct',{a,b,modo,obs,Da:norm(Dv-ct)}];},
+ rumbo:()=>tryGen(()=>{const a=pk(MAIN),b=pk(MAIN);if(a===b)return;const d=dist(LM[a].p,LM[b].p);if(d<5||d>30)return;const o={a,b,...rCt()};
+   if(Math.random()<.5){const rs=brg(LM[a].p,LM[b].p),w=pk(Object.keys(WIND)),rel=norm(WIND[w]-rs);if(Math.min(rel,360-rel)<35||Math.abs(rel-180)<35)return;o.w=w;o.ab=pk([5,8,10]);}return ['rumbo',o];}),
+ demoras:()=>tryGen(()=>{const P=randSea();if(isLand(P))return;const pr=pairFrom(P,40,140,2.5,15);if(!pr)return;const ag=Math.random()<.6,c=ag?rCt():{dm:0,dv:0},ct=c.dm+c.dv;
+   return ['demoras',{a:pr[0].k,b:pr[1].k,da:norm(Math.round(pr[0].b)-ct),db:norm(Math.round(pr[1].b)-ct),aguja:ag,...c}];}),
+ distancias:()=>tryGen(()=>{const P=randSea();if(isLand(P))return;const pr=pairFrom(P,45,135,2.5,12);if(!pr)return;const da=Math.round(pr[0].d*10)/10,db=Math.round(pr[1].d*10)/10;
+   const pts=inter(geom(mkCirc(pr[0].lm.p,da)),geom(mkCirc(pr[1].lm.p,db)));if(pts.length<2)return;pts.sort((p,q)=>dist(p,P)-dist(q,P));
+   const dl=(latOf(pts[0])-latOf(pts[1]))*60,de=(pts[0].e-pts[1].e);const lado=Math.abs(dl)>1?(dl>0?'N':'S'):(de>0?'E':'W');return ['distancias',{a:pr[0].k,da,b:pr[1].k,db,lado}];}),
+ lineas:()=>tryGen(()=>{const [a,b]=pk(OPP),f=rnd(.3,.7),A=LM[a].p,B=LM[b].p,P={e:A.e+(B.e-A.e)*f,n:A.n+(B.n-A.n)*f},lb=brg(A,B);
+   const c=around(P,2.5,15).filter(x=>x.k!==a&&x.k!==b&&(()=>{const s=Math.abs(n180(x.b-lb));return Math.min(s,180-s)>35})());if(!c.length)return;const C=pk(c);return ['lineas',{a,b,c:C.k,dv:Math.round(C.b)}];}),
+ marc:()=>tryGen(()=>{const P=randSea();if(isLand(P))return;const pr=pairFrom(P,40,140,2.5,15);if(!pr)return;const c=rCt(),rv=rint(0,71)*5,ra=norm(rv-c.dm-c.dv);
+   const m=pr.map(x=>Math.round(n180(x.b-rv)));if(m.some(v=>Math.abs(v)<10||Math.abs(v)>170))return;
+   return ['marc',{ra,...c,a:pr[0].k,ma:Math.abs(m[0]),sa:Math.sign(m[0]),b:pr[1].k,mb:Math.abs(m[1]),sb:Math.sign(m[1])}];}),
+ corrRef:()=>['corrRef',{p:roundPos(randSea()),ra:rint(0,71)*5,...rCt(),vm:rint(5,10),rc:rint(0,35)*10,ih:pk([1,1.5,2,2.5,3])}],
+ corrRumbo:()=>tryGen(()=>{const p=roundPos(randSea()),[lm,card,d]=pk(DEST),T2=dest(LM[lm].p,card,d),D=dist(p,T2);if(D<6||D>22)return;return ['corrRumbo',{p,lm,card,d,vm:rint(5,10),rc:rint(0,35)*10,ih:pk([1,1.5,2,2.5,3]),...rCt()}];}),
+ corrDesc:()=>tryGen(()=>{const p=roundPos(randSea()),c=rCt(),rv=rint(0,71)*5,vmm=rint(5,9),t=pk([45,60,90]),Se=dest(p,rv,vmm*t/60);if(!inSea(Se))return;
+   const So=dest(Se,rint(0,35)*10,pk([1.5,2,2.5,3])*t/60),ar=around(So,2.5,12);if(!ar.length)return;ar.sort((x,y)=>x.d-y.d);const L=ar[0],h0=rint(8,20)*60;
+   return ['corrDesc',{p,ra:norm(rv-c.dm-c.dv),...c,vm:vmm,t,lm:L.k,dvl:Math.round(L.b),dl:Math.round(L.d*10)/10,h0:hhmm(h0),h1:hhmm(h0+t)}];}),
+ traslado:()=>tryGen(()=>{const P1=randSea(),ar=around(P1,3,9);if(!ar.length)return;const L=pk(ar),c=rCt(),ct=c.dm+c.dv,rv=rint(0,71)*5,vmm=rint(5,10),t=pk([20,30,40,45]),P2=dest(P1,rv,vmm*t/60);
+   if(!inSea(P2))return;const b2=brg(P2,L.lm.p),ch=Math.abs(n180(b2-L.b));if(ch<30||ch>100||dist(P2,L.lm.p)<2)return;const h0=rint(8,20)*60;
+   return ['traslado',{lm:L.k,ra:norm(rv-ct),...c,vm:vmm,t,b1:norm(Math.round(L.b)-ct),b2:norm(Math.round(b2)-ct),h0:hhmm(h0),h1:hhmm(h0+t)}];}),
+ estima:()=>tryGen(()=>{const [lm,card,d]=pk(DEST),dm=-rint(0,4);let p=dest(LM[lm].p,card,d);const legs=[];
+   for(let i=0;i<2;i++){const dv=pk([-3,-2,-1,1,2,3]),rv=rint(0,71)*5,v=rint(5,10),t=pk([30,45,60]);p=dest(p,rv,v*t/60);if(!inSea(p))return;legs.push({ra:norm(rv-dm-dv),dv,v,t});}
+   return ['estima',{lm,card,d,dm,legs,h0:hhmm(rint(8,18)*60)}];}),
+ estimaC:()=>tryGen(()=>{const p=roundPos(randSea()),c=rCt(),rv=rint(0,71)*5,w=pk(Object.keys(WIND)),rel=norm(WIND[w]-rv);if(Math.min(rel,360-rel)<35||Math.abs(rel-180)<35)return;
+   const o={p,ra:norm(rv-c.dm-c.dv),...c,vm:rint(6,12),w,ab:pk([3,5,8]),rc:rint(0,35)*10,ih:pk([1,1.5,2,2.5]),t:pk([45,60,90])},h0=rint(6,20)*60;o.h0=hhmm(h0);o.h1=hhmm(h0+o.t);
+   const ex=EX.estimaC(o);if(!inSea(ex.ans[0].p))return;return ['estimaC',o];})
+};
+const FIX=[
+ ['Ct por oposición (4.1.3)','ct',{a:'cires',b:'tarifa',modo:'opo',obs:'tarifa',Da:320}],
+ ['Ct por enfilación (4.1.3)','ct',{a:'europa',b:'carnero',modo:'enf',obs:'europa',Da:240}],
+ ['Rumbo y distancia sin viento (4.2.1)','rumbo',{a:'carnero',b:'almina',dm:-4,dv:-2}],
+ ['Rumbo y distancia con viento (4.2.1)','rumbo',{a:'carnero',b:'almina',dm:-4,dv:1,w:'E',ab:5}],
+ ['Situación por distancias (4.3.1)','distancias',{a:'espartel',da:3,b:'malabata',db:6.8,lado:'N'}],
+ ['Situación por dos oposiciones (4.3.2)','lineas',{a:'alcazar',b:'carnero',c2:'cires',d2:'tarifa'}],
+ ['Situación por demoras verdaderas (4.3.3)','demoras',{a:'almina',b:'carnero',da:204,db:293,aguja:false,dm:0,dv:0}],
+ ['Situación por demoras de aguja (4.3.3.1)','demoras',{a:'trafalgar',b:'gracia',da:5,db:95,aguja:true,dm:-7,dv:2}],
+ ['Situación por marcaciones (4.3.3.1)','marc',{ra:90,dm:-4.5,dv:-5.5,a:'cires',ma:160,sa:1,b:'europa',mb:100,sb:-1}],
+ ['Corriente conocida: Ref y Vef (4.5.1 a)','corrRef',{p:PL(36,-6-10/60),ra:140,dm:-4,dv:-1,vm:8,rc:180,ih:3}],
+ ['Corriente conocida: rumbo a gobernar (4.5.1 b)','corrRumbo',{p:PL(35+55/60,-6-12/60),lm:'espartel',card:0,d:3,vm:8,rc:225,ih:3,dm:-4,dv:-1}]
+];
+/* Exámenes oficiales de Patrón de Yate (Cataluña), bloque de carta: mismos datos, opciones y clave; enunciado y solución redactados aquí */
+const P4=(a,b,c,d)=>[a,b,c,d].map(s=>'l = '+s[0]+' · L = '+s[1]);
+const MAREA=(hpa,corr)=>['Busca en el Anuario de Mareas de 2026 las horas y alturas de la pleamar y la bajamar de Cádiz entre las que cae la hora pedida.','Interpola la altura de la marea a esa hora (TU).',`Corrige por presión: 1 cm por cada hPa de diferencia con 1013 hPa. Con ${hpa} hPa la corrección es ${corr}.`,'Sm = Sc + altura de marea + corrección por presión.','Esta carta no incluye el Anuario, así que aquí solo figura la respuesta oficial.'];
+const EXAM=[
+ {id:'B0426PI',name:'Examen 25 abril 2026',q:[
+  [11,'enfDem',{a:'trafalgar',b:'roche',daA:315,c:'gracia',daC:98},P4(["36° 05,4' N","005° 56,8' W"],["36° 06,6' N","005° 58,0' W"],["36° 07,9' N","005° 59,2' W"],["36° 10,0' N","006° 01,2' W"]),2],
+  [12,'demDist',{lm:'trafalgar',da:331,d:5,za:350},P4(["36° 06,0' N","006° 02,0' W"],["36° 06,2' N","006° 00,0' W"],["36° 07,1' N","005° 58,1' W"],["36° 08,2' N","005° 56,8' W"]),1],
+  [13,'pasar',{p:PL(35+40/60,-(5+12/60)),lm:'almina',d:3,side:'E',w:'E',ab:15,ct:7},['Ra = 019°','Ra = 349°','Ra = 335°','Ra = 005°'],3],
+  [14,'traslado',{lm:'trafalgar',lm2:'espartel',ra:170,ct:10,vm:10,t:60,b1:21,b2:90,h0:'04:00',h1:'05:00'},P4(["35° 59,6' N","006° 10,6' W"],["35° 55,4' N","006° 07,8' W"],["35° 49,6' N","006° 10,4' W"],["35° 46,0' N","006° 05,7' W"]),2],
+  [15,'corrRumbo',{p:PL(36+10/60,-(6+10/60)),lm:'tanger',card:null,vm:7,rc:90,ih:3,rvOnly:true},['Rv = 121° · Vef = 4,7 kn','Rv = 121° · Vef = 8,5 kn','Rv = 160° · Vef = 4,7 kn','Rv = 160° · Vef = 8,5 kn'],3],
+  [16,'corrDesc',{lm0:'europa',dv0:315,d0:9.3,rv:270,vm:7,t:90,lm:'europa',dvl:0,dl:6.6,h0:'06:00',h1:'07:30'},['Rc = 090° · Ihc = 2,7 kn','Rc = 090° · Ihc = 4,0 kn','Rc = 270° · Ihc = 2,7 kn','Rc = 270° · Ihc = 4,0 kn'],0],
+  [17,'traslado',{lm:'trafalgar',verd:true,rv:90,vm:12,t:30,b1:45,b2:0,h0:'05:00',h1:'05:30'},P4(["36° 05,1' N","006° 02,0' W"],["36° 05,1' N","006° 09,3' W"],["35° 59,1' N","006° 02,0' W"],["35° 59,1' N","006° 16,8' W"]),0],
+  [18,'loxDir',{lat:36,lon:-(6+20/60),rd:293,v:7.5,h:6,h0:'04:00',h1:'10:00'},P4(["36° 41,4' N","006° 34,2' W"],["36° 41,4' N","006° 41,9' W"],["36° 17,6' N","006° 53,4' W"],["36° 17,6' N","007° 11,3' W"]),3],
+  [19,'loxInv',{la1:36,lo1:-(6+20/60),la2:36+50/60,lo2:-(7+53/60),ask:'rd'},['Rd = 293°','Rd = 304°','Rd = 326°','Rd = 337°'],1],
+  [20,'info',{tipo:'Mareas',html:'El 25 de abril de 2026, en el puerto de <b>Cádiz</b>, la sonda en la carta es Sc = 2,0 m y la presión 1003 hPa. Calcula la sonda en el momento a TU = 15:00.',pasos:MAREA(1003,'+0,10 m'),res:'Sm = 3,82 m (clave oficial)'},['Sm = 2,90 m','Sm = 3,36 m','Sm = 3,82 m','Sm = 4,28 m'],2]]},
+ {id:'B0626PI',name:'Examen 20 junio 2026',q:[
+  [11,'ct',{a:'tarifa',b:'paloma',modo:'enf',obs:'tarifa',Da:302},['Ct = −5,5°','Ct = −3,0°','Ct = 0,0°','Ct = +3,0°'],3],
+  [12,'rumbo',{a:'tanger',b:'barbateR',dm:-.4,dv:3.5,dmNote:true,w:'W',ab:4,noD:true},['Ra = 338°','Ra = 345°','Ra = 352°','Ra = 359°'],0],
+  [13,'estimaC',{p:PL(35+50/60,-(6+10/60)),ra:0,dm:-.4,dv:3.5,dmNote:true,vm:12,w:'E',ab:3,rc:225,ih:1.5,t:60,h0:'06:00',h1:'07:00'},P4(["36° 00,9' N","006° 11,3' W"],["36° 00,9' N","006° 09,6' W"],["36° 03,1' N","006° 08,7' W"],["36° 03,1' N","006° 06,7' W"]),0],
+  [14,'traslado',{lm:'espartel',verd:true,rv:0,vm:12,t:20,b1:45,b2:90,b2txt:'se observa el mismo faro por el través de estribor (Dv = Rv + 90° = 090°)',h0:'00:00',h1:'00:20'},P4(["35° 49,5' N","006° 00,4' W"],["35° 49,5' N","006° 10,3' W"],["35° 47,5' N","006° 00,4' W"],["35° 47,5' N","006° 10,3' W"]),2],
+  [15,'enfDist',{a:'tarifa',b:'paloma',d:3},P4(["36° 01,8' N","005° 39,4' W"],["35° 58,3' N","005° 33,5' W"],["36° 01,8' N","005° 33,5' W"],["35° 58,3' N","005° 39,4' W"]),1],
+  [16,'corrDesc',{p:PL(35+57.5/60,-(5+40/60)),rv:270,vm:12,t:60,so:PL(35+57.5/60,-(5+58.5/60)),h0:'13:00',h1:'14:00'},['Rc = 090° · Ihc = 1,5 kn','Rc = 090° · Ihc = 3,0 kn','Rc = 270° · Ihc = 1,5 kn','Rc = 270° · Ihc = 3,0 kn'],3],
+  [17,'corrRumbo',{from:'tanger',lm:'barbateR',card:null,vm:12,rc:90,ih:3,dm:-.4,dv:3.5,dmNote:true},['Ra = 002°','Ra = 328°','Ra = 334°','Ra = 356°'],1],
+  [18,'loxInv',{la1:28+10.8/60,lo1:-(15+23/60),la2:28+28.8/60,lo2:-(16+13.7/60),ask:'rd'},['Rd = 022°','Rd = 068°','Rd = 292°','Rd = 338°'],2],
+  [19,'loxInv',{la1:39+26/60,lo1:2.5,la2:39+26/60,lo2:-.3,ask:'d'},['D = 106,7 M','D = 129,8 M','D = 168,0 M','D = 217,5 M'],1],
+  [20,'info',{tipo:'Mareas',html:'El 20 de junio de 2026, en el puerto de <b>Cádiz</b>, la sonda en la carta es Sc = 2,4 m y la presión 1030 hPa. Calcula la sonda en el momento a TU = 12:00.',pasos:MAREA(1030,'−0,17 m'),res:'Sm = 3,74 m (clave oficial)'},['Sm = 4,41 m','Sm = 4,08 m','Sm = 3,74 m','Sm = 2,63 m'],2]]}
+];
+const GN={ct:'Corrección total por oposición',rumbo:'Rumbo y distancia',demoras:'Situación por dos demoras',distancias:'Situación por distancias',lineas:'Oposición y demora',marc:'Situación por marcaciones',corrRef:'Corriente: rumbo efectivo',corrRumbo:'Corriente: rumbo a gobernar',corrDesc:'Corriente desconocida',traslado:'Traslado de demora',estima:'Estima gráfica',estimaC:'Estima con viento y corriente'};
+$('#examSel').innerHTML=EXAM.map((x,i)=>`<option value="${i}">${x.name}</option>`).join('');
+$('#exSel').innerHTML='<optgroup label="Aleatorios · datos nuevos cada vez">'+Object.keys(GEN).map(k=>`<option value="g:${k}">${GN[k]}</option>`).join('')+'</optgroup><optgroup label="Ejemplos de los apuntes · UT-4">'+FIX.map((f,i)=>`<option value="f:${i}">${f[0]}</option>`).join('')+'</optgroup>';
+
+/* Learning tabs only change the view. Opening an activity is an explicit action. */
+const learning={tab:'misiones',mode:'examen',catalogOpen:false};
+function setLearningTab(tab,focus=false){
+  if(!['misiones','practica'].includes(tab))return;
+  learning.tab=tab;
+  $$('.learning-tabs [role="tab"]').forEach(b=>{
+    const selected=b.dataset.learning===tab;
+    b.setAttribute('aria-selected',selected);b.tabIndex=selected?0:-1;
+    if(selected&&focus)b.focus();
+  });
+  $('#learn-misiones').hidden=tab!=='misiones';
+  $('#learn-practica').hidden=tab!=='practica';
+}
+function setPracticeMode(mode){
+  learning.mode=mode;
+  syncPracticeControls();
+}
+function syncPracticeControls(){
+  const exam=learning.mode==='examen',x=S.ex;
+  $$('.practice-modes button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.practice===learning.mode));
+  $('#examFields').hidden=!exam;$('#practiceFields').hidden=exam;
+  const same=!!(x&&x.val&&(exam?x.mc&&x.mc.i===+$('#examSel').value:!x.mc&&x.val===$('#exSel').value));
+  $('#exBox').hidden=!same;$('#practiceEmpty').hidden=same;
+  if(exam){
+    const saved=S.exam[EXAM[+$('#examSel').value].id]||{};
+    const started=same||Object.keys(saved).length>0;
+    $('#exLoad').textContent=started?'Continuar examen':'Empezar examen';
+    $('#practiceEmpty').textContent=started?'Tus respuestas están guardadas. Pulsa «Continuar examen» para volver al bloque de carta.':'Elige una convocatoria y pulsa «Empezar examen». Tus respuestas se guardan en este navegador.';
+  }else{
+    const random=$('#exSel').value.startsWith('g:');
+    $('#exLoad').textContent=random?(same?'Generar otro ejercicio':'Generar ejercicio'):'Abrir ejemplo';
+    $('#practiceHint').textContent=random?'Cada ejercicio usa datos nuevos del tema elegido. Resuelve y comprueba tu resultado.':'Un ejemplo de los apuntes UT-4, con datos fijos y solución explicada.';
+    $('#practiceEmpty').textContent='Elige un tema aleatorio o un ejemplo de los apuntes para empezar. Aquí no hay orden ni desbloqueos.';
+  }
+}
+$('.learning-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-learning]');if(b)setLearningTab(b.dataset.learning);});
+$('.learning-tabs').addEventListener('keydown',e=>{
+  const tabs=$$('.learning-tabs [role="tab"]'),i=tabs.indexOf(e.target);
+  if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();
+  const next=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  setLearningTab(tabs[next].dataset.learning,true);
+});
+$('.practice-modes').addEventListener('click',e=>{const b=e.target.closest('[data-practice]');if(b)setPracticeMode(b.dataset.practice);});
+/* ---------- Modo guiado: pasos comprobados sobre la carta, con puntos, estrellas y rangos ---------- */
+const gQ=(label,v,tol,unit,txt,hint,x)=>Object.assign({k:'q',label,v,tol,unit,txt,hint},x);
+const gD=(o,txt,x)=>Object.assign({k:'d',o,txt},x);
+const ANG={circ:true};
+const qCt=o=>{const ct=ctOf(o);return gQ('Ct',ct,.3,'°',o.ct!=null?'El enunciado da la corrección total. ¿Cuánto vale, con su signo?':o.dmNote?'Actualiza la dm con la leyenda de la carta para 2026 y súmale el desvío: Ct = dm + desvío.':'Calcula la corrección total: Ct = dm + desvío, cada uno con su signo (E suma, W resta).',ctStep(o),{setCt:ct,alt:[[-ct,'El número está bien, pero el signo no. Este (E) es positivo y Oeste (W) negativo.']]});};
+const qRa=(rv,ct)=>gQ('Ra',norm(rv-ct),2,'°','Al timonel hay que dárselo de aguja: Ra = Rv − Ct.',`${f3(rv,1)} − (${sg(ct)}°) = ${f3(rv-ct,1)}.`,{circ:true,alt:[[norm(rv+ct),'Has sumado la Ct. De verdadero a aguja se resta.'],[norm(rv),'Ese es el verdadero. Réstale la Ct.']]});
+const qDv=(name,da,ct,lab)=>gQ(lab||'Dv',norm(da+ct),1.5,'°',`Pasa a verdadera la demora a ${name}: Dv = Da + Ct.`,`${f3(da)} ${sg(ct)}° = ${fA(norm(da+ct))}.`,{circ:true,alt:[[norm(da-ct),'Has restado la Ct. De aguja a verdadero se suma, con su signo.'],[norm(da),'Ese es el valor de aguja. Súmale la Ct.']]});
+const qRv=(ra,ct)=>gQ('Rv',norm(ra+ct),1.5,'°','Pasa el rumbo a verdadero: Rv = Ra + Ct.',`${f3(ra)} ${sg(ct)}° = ${fA(norm(ra+ct))}.`,{circ:true,alt:[[norm(ra-ct),'Has restado la Ct. De aguja a verdadero se suma, con su signo.'],[norm(ra),'Ese es el rumbo de aguja. Súmale la Ct.']]});
+const qWind=(label,base,ab,w,dir)=>gQ(label,norm(base+dir*ab),1.5,'°',`Viento del ${WN[w]} que abate ${Math.abs(ab)}°. Decide por qué banda entra y ${dir<0?'quita el abatimiento: Rv = Rs − abatimiento':'añade el abatimiento: Rs = Rv + abatimiento'}.`,`Entra por ${ab>0?'babor y abate a estribor (+)':'estribor y abate a babor (−)'}: ${f3(base,1)} ${dir<0?'−':'+'} (${sg(ab)}°) = ${f3(base+dir*ab,1)}.`,{circ:true,alt:[[norm(base-dir*ab),'Tienes el abatimiento con el signo cambiado: si el viento entra por babor abate a estribor (+), y al revés.']]});
+const LADO={N:'norte',S:'sur',E:'este',W:'oeste'};
+const GUIDE={
+ ct(o,d){const A=LM[o.a],B=LM[o.b],obs=LM[o.obs],Dv=Math.round(o.modo==='enf'?brg(A.p,B.p):(o.obs===o.a?brg(B.p,A.p):brg(A.p,B.p))),ct=n180(Dv-o.Da);
+  return [gD(d[0],`Une ${A.name} con ${B.name} con el útil Enfilación. Tu barco está en algún punto de esa línea.`),
+   gQ('Dv',Dv,1.5,'°',`La etiqueta de la línea da sus dos sentidos. ¿Cuál es la demora verdadera a ${obs.name}? ${o.modo==='enf'?`En la enfilación ves ${A.name} delante y ${B.name} detrás.`:'En la oposición estás entre los dos faros.'}`,`Mirando hacia ${obs.name}, la línea va al ${f3(Dv)}.`,{circ:true,alt:[[norm(Dv+180),'Ese es el sentido contrario: la demora se mide mirando hacia el faro.']]}),
+   gQ('Ct',ct,1,'°',`La aguja marcaba Da = ${f3(o.Da)} a ese faro. La diferencia es el error del compás: Ct = Dv − Da.`,`${Dv} − ${o.Da} = ${sg(ct)}°.`,{setCt:ct,alt:[[-ct,'Está al revés: es Dv − Da, no Da − Dv.']]})];},
+ rumbo(o,d){const A=LM[o.a],B=LM[o.b],rs=brg(A.p,B.p),ct=ctOf(o),ab=o.ab?o.ab*abSign(o.w,rs):0,rv=rs-ab,s=[gD(d[0],`Une ${A.name} con ${B.name} con el útil Rumbo: pulsa primero la salida.`),
+   gQ(o.ab?'Rs':'Rv',rs,1.5,'°',`Lee el rumbo en la etiqueta del trazo.${o.ab?' Con viento, lo que trazas en la carta es el rumbo de superficie.':''}`,`La etiqueta marca ${f3(rs,1)}.`,ANG)];
+  if(o.ab)s.push(qWind('Rv',rs,ab,o.w,-1));
+  s.push(qCt(o),qRa(rv,ct));if(!o.noD)s.push(gQ('Distancia',dist(A.p,B.p),.3,'M','Lee la distancia en la misma etiqueta.',`Son ${nf(dist(A.p,B.p),1)} M.`));return s;},
+ demoras(o,d){const A=LM[o.a],B=LM[o.b],ct=o.aguja?o.dm+o.dv:0,s=[];
+  if(o.aguja)s.push(qCt(o),qDv(A.name,o.da,ct,'Dv 1'),qDv(B.name,o.db,ct,'Dv 2'));
+  s.push(gD(d[0],`Traza la demora verdadera a ${A.name}, ${fA(norm(o.da+ct))}. El útil dibuja la opuesta, desde el faro hacia la mar.`),gD(d[1],`Ahora la de ${B.name}, ${fA(norm(o.db+ct))}.`),gD(d[2],'Estás en las dos líneas a la vez: marca su corte con el útil Punto.'));return s;},
+ distancias(o,d){const A=LM[o.a],B=LM[o.b];return [gD(d[0],`Traza un círculo de ${nf(o.da,1)} M con centro en ${A.name}: estás en algún punto de él.`),gD(d[1],`Otro de ${nf(o.db,1)} M con centro en ${B.name}.`),gD(d[2],`Los círculos se cortan en dos puntos. Marca el que queda más al ${LADO[o.lado]}.`)];},
+ lineas(o,d){const A=LM[o.a],B=LM[o.b];return [gD(d[0],`Une ${A.name} con ${B.name}: en la oposición estás entre los dos.`),o.c2?gD(d[1],`Une ${LM[o.c2].name} con ${LM[o.d2].name}.`):gD(d[1],`Traza la demora verdadera a ${LM[o.c].name}, ${f3(o.dv)}.`),gD(d[2],'Marca el corte de las dos líneas: es la situación.')];},
+ enfDem(o,d){const A=LM[o.a],B=LM[o.b],C=LM[o.c],dvE=Math.round(brg(A.p,B.p)*2)/2,ct=n180(dvE-o.daA),dvC=norm(o.daC+ct);
+  return [gD(d[0],`Traza la enfilación: une ${B.name} con ${A.name}.`),
+   gQ('Dv',dvE,1.5,'°',`En la enfilación ves ${A.name} delante y ${B.name} detrás. Lee en la etiqueta la demora verdadera a ${A.name}.`,`Mirando de ${A.name} hacia ${B.name}, la línea va al ${fA(dvE)}.`,{circ:true,alt:[[norm(dvE+180),'Ese es el sentido contrario: la demora se mide mirando hacia el faro.']]}),
+   gQ('Ct',ct,1,'°',`La aguja marcaba Da = ${f3(o.daA)} a ${A.name}. Calcula Ct = Dv − Da.`,`${fA(dvE)} − ${f3(o.daA)} = ${sg(ct)}°.`,{setCt:ct,alt:[[-ct,'Está al revés: es Dv − Da.']]}),
+   qDv(C.name,o.daC,ct),gD(d[1],`Traza la demora verdadera a ${C.name}, ${fA(dvC)}.`),gD(d[2],'Marca el corte con la enfilación: es la situación.')];},
+ enfDist(o,d){const A=LM[o.a],B=LM[o.b];return [gD(d[0],`Traza la enfilación: une ${B.name} con ${A.name}.`),gD(d[1],`Círculo de ${nf(o.d,1)} M con centro en ${A.name}.`),gD(d[2],`El círculo corta la línea en dos puntos. En la enfilación ves ${A.name} delante y ${B.name} detrás: marca el corte que cumple eso.`)];},
+ demDist(o,d){const L=LM[o.lm],ct=n180(-o.za);return [gQ('Ct',ct,1,'°',`La Polar está en el norte verdadero: su azimut verdadero es 000°. La aguja la marca al ${f3(o.za)}. Ct = Zv − Za.`,`360 − ${o.za} = ${sg(ct)}°.`,{setCt:ct,alt:[[-ct,'El signo está al revés: si la aguja marca de menos, hay que sumar.']]}),
+   qDv(L.name,o.da,ct),gD(d[0],`Traza la demora verdadera a ${L.name}, ${fA(norm(o.da+ct))}.`),gD(d[1],`Círculo de ${nf(o.d,1)} M con centro en ${L.name}.`),gD(d[2],'Marca el corte de la demora con el círculo.')];},
+ pasar(o,d){const L=LM[o.lm],t=d[2],rs=brg(t.a,t.b),ab=o.ab?o.ab*abSign(o.w,rs):0,rv=rs-ab,ct=ctOf(o),s=[gD(d[0],'Sitúa la salida del enunciado con el útil Punto.',{coord:true}),gD(d[1],`Círculo de ${nf(o.d,1)} M con centro en ${L.name}: es la distancia a la que quieres pasar.`),
+   gD(d[2],'Con el útil Rumbo, traza desde la salida la tangente al círculo por el lado de la mar.',{dirOnly:true}),gQ(o.ab?'Rs':'Rv',rs,1.5,'°','Lee el rumbo de la tangente en su etiqueta.',`La etiqueta marca ${f3(rs,1)}.`,ANG)];
+  if(o.ab)s.push(qWind('Rv',rs,ab,o.w,-1));s.push(qCt(o),qRa(rv,ct));return s;},
+ marc(o,d){const A=LM[o.a],B=LM[o.b],ct=o.dm+o.dv,rv=o.ra+ct,bd=s=>s>0?'estribor':'babor',qm=(L,m,sgn,lab)=>gQ(lab,norm(rv+m*sgn),1.5,'°',`Marcación ${m}° por ${bd(sgn)} a ${L.name}. Se cuenta desde la proa: Dv = Rv + M por estribor, Rv − M por babor.`,`${fA(norm(rv))} ${sgn>0?'+':'−'} ${m}° = ${fA(norm(rv+m*sgn))}.`,{circ:true,alt:[[norm(rv-m*sgn),'Has usado la banda contraria: estribor suma, babor resta.']]});
+  return [qCt(o),qRv(o.ra,ct),qm(A,o.ma,o.sa,'Dv 1'),qm(B,o.mb,o.sb,'Dv 2'),gD(d[0],`Traza la demora verdadera a ${A.name}.`),gD(d[1],`Y la de ${B.name}.`),gD(d[2],'Marca el corte: es la situación.')];},
+ corrRef(o,d){const ct=o.dm+o.dv,rv=o.ra+ct,t=tri('a',{rv,vm:o.vm,rc:o.rc,ih:o.ih});
+  return [gD(d[0],'Sitúa la salida del enunciado con el útil Punto.',{coord:true}),qCt(o),qRv(o.ra,ct),
+   gD(d[1],`Traza la corriente desde la salida: útil Rumbo, rumbo ${f3(o.rc)} y ${nf(o.ih,1)} M (lo que te mueve en una hora).`),
+   gD(d[2],`Desde el extremo de la corriente traza tu Rv ${fA(norm(rv))} con ${nf(o.vm,0)} M (lo que avanzas en una hora).`),
+   gD(d[3],'Une la salida con el extremo final: ese trazo es por donde vas de verdad.'),
+   gQ('Ref',t.ref,2,'°','Lee el rumbo efectivo en la etiqueta de ese último trazo.',`Ref = ${f3(t.ref,1)}.`,ANG),gQ('Vef',t.vef,.3,'kn','Su longitud en millas es la velocidad efectiva, porque el triángulo es de una hora.',`Vef = ${nf(t.vef,1)} kn.`)];},
+ corrRumbo(o,d){const L=LM[o.lm],P0=d[0].p,T2=d[1].b,ct=o.rvOnly?0:ctOf(o),rv=brg(d[4].a,d[4].b),vef=dist(P0,d[4].b),s=[];
+  if(!o.from)s.push(gD(d[0],'Sitúa la salida del enunciado con el útil Punto.',{coord:true}));
+  if(o.card!=null)s.push(gD(mkSeg(L.p,T2,'med'),`Sitúa el destino: desde ${L.name} traza rumbo ${f3(o.card)} y ${nf(o.d,0)} M.`));
+  s.push(gD(d[1],'Une la salida con el destino: es el rumbo efectivo que quieres conseguir.'),gD(d[2],`Traza la corriente desde la salida: rumbo ${f3(o.rc)} y ${nf(o.ih,1)} M.`),
+   gD(d[3],`Compás: círculo de ${nf(o.vm,0)} M (tu Vm) con centro en el extremo de la corriente.`),
+   gD(d[4],'Une el extremo de la corriente con el punto donde el círculo corta al rumbo efectivo.'),
+   gQ('Rv',rv,2,'°','Lee en la etiqueta de ese trazo el rumbo que hay que gobernar.',`Rv = ${f3(rv,1)}.`,ANG));
+  if(!o.rvOnly)s.push(qCt(o),qRa(rv,ct));
+  s.push(gQ('Vef',vef,.3,'kn','La velocidad efectiva es la distancia de la salida a ese corte. Mídela con el útil Rumbo.',`Vef = ${nf(vef,1)} kn.`));return s;},
+ corrDesc(o,d){const f=(t,l)=>d.find(x=>x.t===t&&(x.label===l||x.kind===l)),A=f('pt','A'),So=f('pt','So'),sr=f('seg','rv'),sc=f('seg','rc'),rays=d.filter(x=>x.t==='ray'),s=[];
+  const ct=o.rv!=null?0:ctOf(o),rv=o.rv!=null?o.rv:o.ra+ct,dn=o.vm*o.t/60;
+  if(o.lm0)s.push(gD(rays[0],`Traza la demora verdadera a ${LM[o.lm0].name}, ${f3(o.dv0)}.`),gD(A,`Sobre esa demora, a ${nf(o.d0,1)} M del faro, está la salida. Ayúdate de un círculo y márcala con el útil Punto.`));
+  else s.push(gD(A,'Sitúa la salida del enunciado con el útil Punto.',{coord:true}));
+  if(o.rv==null)s.push(qCt(o),qRv(o.ra,ct));
+  s.push(gQ('Distancia',dn,.2,'M',`¿Cuántas millas navegas en ${o.t} min a ${nf(o.vm,0)} kn?`,`${nf(o.vm,0)} × ${o.t} / 60 = ${nf(dn,1)} M.`),
+   gD(sr,`Traza la estima: desde la salida, Rv ${fA(norm(rv))} y ${nf(dn,1)} M. El extremo es donde crees estar (Se).`));
+  if(o.so)s.push(gD(So,'Sitúa con el útil Punto la posición que da el GPS (So).',{coord:true}));
+  else s.push(gD(rays[rays.length-1],`Traza la demora verdadera a ${LM[o.lm].name}, ${f3(o.dvl)}.`),gD(So,`Sobre ella, a ${nf(o.dl,1)} M del faro, está donde estás de verdad (So). Márcalo.`));
+  const rc=brg(sc.a,sc.b),der=dist(sc.a,sc.b);
+  s.push(gD(sc,'Une Se con So, en ese orden: es lo que te ha movido la corriente.'),gQ('Rc',rc,6,'°','Lee el rumbo de la corriente en la etiqueta.',`Rc = ${f3(rc)}.`,{circ:true,alt:[[norm(rc+180),'Está al revés: la corriente va de la estima (Se) a la observada (So).']]}),
+   gQ('Ihc',der*60/o.t,.3,'kn',`Esa deriva fue en ${o.t} min. Pásala a una hora: Ihc = deriva × 60 / minutos.`,`${nf(der,2)} × 60 / ${o.t} = ${nf(der*60/o.t,1)} kn.`,{alt:[[der,'Esa es la deriva total. La intensidad horaria es por hora.']]}));return s;},
+ traslado(o,d){const L=LM[o.lm],L2=LM[o.lm2||o.lm],ct=o.verd?0:ctOf(o),rv=(o.verd?o.rv:o.ra)+ct,dv1=norm(o.b1+ct),dv2=norm(o.b2+ct),dn=o.vm*o.t/60,s=[];
+  if(!o.verd)s.push(qCt(o),qRv(o.ra,ct),qDv(L.name,o.b1,ct,'Dv 1'),qDv(L2.name,o.b2,ct,'Dv 2'));
+  s.push(gD(d[0],`Traza la primera demora verdadera a ${L.name}, ${fA(dv1)}.`),gD(d[1],`Traza la segunda, ${fA(dv2)}, ${L2===L?'al mismo faro':'a '+L2.name}.`),
+   gQ('Distancia',dn,.2,'M',`Entre las dos demoras navegas ${o.t} min a ${nf(o.vm,0)} kn. ¿Cuántas millas?`,`${nf(o.vm,0)} × ${o.t} / 60 = ${nf(dn,1)} M.`),
+   gD(d[2],`Desde ${L.name} traza tu Rv ${fA(norm(rv))} con ${nf(dn,1)} M: es lo que se ha desplazado la primera demora.`),
+   gD(d[3],'Traslada la primera demora: con el útil Paralela, pulsa la primera demora y luego el extremo del tramo navegado.'),
+   gD(d[4],'Donde la demora trasladada corta a la segunda está la situación. Márcala.'));return s;},
+ estima(o,d){const L=LM[o.lm],s=[gD(d[0],`Sitúa la salida: desde ${L.name} traza rumbo ${f3(o.card)} y ${nf(o.d,0)} M, y marca el extremo con el útil Punto.`)];
+  o.legs.forEach((g,i)=>{const ct=o.dm+g.dv,dn=g.v*g.t/60;s.push(gQ('Rv',norm(g.ra+ct),1.5,'°',`Tramo ${i+1}: Ra ${f3(g.ra)}, dm ${fEW(o.dm)} y desvío ${fEW(g.dv)}. Calcula la Ct del tramo y pasa el rumbo a verdadero.`,`Ct = ${sg(ct)}°. Rv = ${f3(g.ra)} ${sg(ct)}° = ${f3(g.ra+ct)}.`,{circ:true,alt:[[norm(g.ra-ct),'Has restado la Ct. De aguja a verdadero se suma.'],[norm(g.ra),'Ese es el rumbo de aguja. Súmale la Ct.']]}),
+    gD(d[1+i],`Traza el tramo ${i+1}: Rv ${f3(g.ra+ct)} y ${nf(g.v,0)} kn × ${g.t} min = ${nf(dn,1)} M.`));});
+  s.push(gD(d[d.length-1],'Marca el extremo del último tramo: es la situación de estima.'));return s;},
+ estimaC(o,d){const ct=ctOf(o),rv=o.ra+ct,ab=o.ab?o.ab*abSign(o.w,rv):0,rs=rv+ab,dn=o.vm*o.t/60,dc=o.ih*o.t/60,s=[gD(d[0],'Sitúa la salida del enunciado con el útil Punto.',{coord:true}),qCt(o),qRv(o.ra,ct)];
+  if(o.ab)s.push(qWind('Rs',rv,ab,o.w,1));
+  s.push(gD(d[1],`Traza el ${o.ab?'Rs':'Rv'} ${fA(norm(rs))} con ${nf(o.vm,0)} kn × ${o.t} min = ${nf(dn,1)} M.`),gD(d[2],`Desde ese extremo traza la corriente: rumbo ${f3(o.rc)} y ${nf(o.ih,1)} kn × ${o.t} min = ${nf(dc,1)} M.`),gD(d[4],'Marca el extremo de la corriente: es la situación.'));return s;},
+ loxDir(o){const Dn=o.v*o.h,q=lox(o.lat,o.lon,o.rd,Dn);return [gQ('Distancia',Dn,.3,'M','¿Cuántas millas se navegan? D = V × t.',`${nf(o.v,1)} × ${o.h} = ${nf(Dn,1)} M.`),
+   gQ('Δl',Math.abs(q.dl),.3,"'",'Diferencia de latitud: Δl = D · cos R. Dala en minutos, sin signo.',`${nf(Dn,1)} × cos ${o.rd}° = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'}.`,{alt:[[Math.abs(q.A),'Ese es el apartamiento (seno). La diferencia de latitud va con el coseno.']]}),
+   gQ('A',Math.abs(q.A),.4,"'",'Apartamiento: A = D · sen R, sin signo.',`${nf(Dn,1)} × sen ${o.rd}° = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}.`),
+   gQ('ΔL',Math.abs(q.dL),.5,"'",`El apartamiento son millas, no minutos de longitud. Con la latitud media lm = ${fLat(q.lm)}: ΔL = A / cos lm.`,`${nf(Math.abs(q.A),1)} / cos lm = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}.`,{alt:[[Math.abs(q.A),'Falta dividir por el coseno de la latitud media.']]})];},
+ loxInv(o){const q=loxInv(o.la1,o.lo1,o.la2,o.lo2),s=[gQ('Δl',Math.abs(q.dl),.3,"'",'Diferencia de latitud entre salida y llegada, en minutos y sin signo.',`${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'}.`),
+   gQ('ΔL',Math.abs(q.dL),.5,"'",'Diferencia de longitud, en minutos y sin signo. Si una es E y la otra W, se suman.',`${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}.`),
+   gQ('A',Math.abs(q.A),.5,"'",`Pasa la diferencia de longitud a millas con la latitud media lm = ${fLat(q.lm)}: A = ΔL · cos lm.`,`${nf(Math.abs(q.dL),1)} × cos lm = ${nf(Math.abs(q.A),1)}.`)];
+  s.push(o.ask==='d'?gQ('Distancia',q.D,.5,'M',Math.abs(q.dl)<.05?'Misma latitud: la distancia es el apartamiento.':'D = Δl / cos R.',`${nf(q.D,1)} M.`):gQ('Rd',q.R,1.5,'°','tg R = A / Δl. Da el rumbo de 000° a 360° según el cuadrante.',`Rd = ${f3(q.R)}.`,{circ:true,alt:[[norm(360-q.R),'El ángulo está bien, pero el cuadrante no: mira si vas hacia el E o hacia el W.'],[norm(180-q.R),'El ángulo está bien, pero el cuadrante no: mira si vas hacia el N o hacia el S.']]}));return s;}
+};
+function makeEx(spec){const x=EX[spec[0]](spec[1]);x.spec=spec;try{x.guia=GUIDE[spec[0]]?GUIDE[spec[0]](spec[1],x.draw()):null;}catch(e){x.guia=null;}return x;}
+
+const toolOf=o=>({pt:'punto',ray:'demora',circ:'circ',seg:'rumbo',line:o.kindName==='Paralela'?'paralela':'enfil'}[o.t]);
+const repP=o=>o.t==='circ'?o.c:o.t==='seg'?o.b:o.p;
+function perpM(p,q,c){const u=uv(c);return Math.abs((p.e-q.e)*u.n-(p.n-q.n)*u.e)*Math.cos(rad(latOf(p)));}
+const angd=(a,b)=>Math.abs(n180(a-b)),angl=(a,b)=>{const d=angd(a,b);return Math.min(d,180-d);},dirOf=o=>o.t==='seg'?brg(o.a,o.b):o.c,anyP=o=>o.t==='seg'?o.a:o.p;
+function matchObj(t,o,st){
+  if(o.sol)return false;
+  if(t.t==='pt')return o.t==='pt'&&dist(o.p,t.p)<=.3;
+  if(t.t==='circ')return o.t==='circ'&&dist(o.c,t.c)<=.25&&Math.abs(o.r-t.r)<=.15;
+  if(o.t==='pt'||o.t==='circ')return false;
+  if(t.t==='ray'){if(o.t==='ray')return dist(o.p,t.p)<=.25&&angd(o.c,t.c)<=1.2;return angl(dirOf(o),t.c)<=1.2&&perpM(t.p,anyP(o),dirOf(o))<=.2;}
+  if(t.t==='line')return angl(dirOf(o),t.c)<=1.2&&perpM(t.p,anyP(o),dirOf(o))<=.25;
+  if(o.t!=='seg'||dist(o.a,t.a)>.3)return false;
+  return st&&st.dirOnly?angd(brg(o.a,o.b),brg(t.a,t.b))<=1.5:dist(o.b,t.b)<=.3;
+}
+function diagnose(st,o){const t=st.o,ct=S.guide.ct||0;
+  if(t.t==='pt')return o.t!=='pt'?'':`Ese punto queda a ${nf(dist(o.p,t.p),1)} M de donde debe estar. ${st.coord?'Revisa los grados y minutos que has escrito.':'Acerca la carta y pulsa justo sobre el corte: el cursor se imanta.'}`;
+  if(t.t==='circ'){if(o.t!=='circ')return '';return dist(o.c,t.c)>.25?'El círculo no está centrado en el punto que toca.':`El centro está bien, pero la distancia no: has puesto ${nf(o.r,1)} M.`;}
+  if(t.t==='ray'){if(o.t!=='ray')return '';if(dist(o.p,t.p)>.25)return 'Esa demora no sale del faro que toca.';const d=n180(o.c-t.c);
+    if(ct&&Math.abs(n180(d+ct))<=1)return `Has trazado la demora de aguja sin corregir. Dv = Da + Ct: súmale ${sg(ct)}°.`;
+    if(ct&&Math.abs(n180(d+2*ct))<=1)return 'Has aplicado la Ct con el signo cambiado.';
+    if(Math.abs(Math.abs(d)-180)<=1.2)return 'Está al revés. Escribe la demora tal cual: el útil ya dibuja la opuesta.';
+    return `Sale del faro correcto, pero el ángulo se va ${nf(Math.abs(d),1)}°. Revisa la demora verdadera.`;}
+  if(t.t==='seg'){if(o.t!=='seg')return '';if(dist(o.a,t.a)>.3)return 'Ese trazo no empieza en el punto que toca.';const d=n180(brg(o.a,o.b)-brg(t.a,t.b));
+    if(Math.abs(d)>1.5)return ct&&Math.abs(n180(d+ct))<=1.2?`Has trazado el rumbo de aguja sin corregir. Rv = Ra + Ct: súmale ${sg(ct)}°.`:`El rumbo se va ${nf(Math.abs(d),1)}° del que toca.`;
+    return `El rumbo está bien, pero la distancia no: has llevado ${nf(dist(o.a,o.b),1)} M.`;}
+  return o.t==='pt'||o.t==='circ'?'':'Esa línea no pasa por donde debe. Pulsa justo sobre los puntos: el cursor se imanta a los faros.';}
+function autoHint(st){const t=st.o;
+  if(t.t==='pt')return 'Útil Punto: '+(st.coord?`escribe ${fPos(t.p)} y pulsa Situar.`:'acerca el cursor al corte hasta que marque «corte» y pulsa.');
+  if(t.t==='ray')return `Útil Demora: pulsa ${t.ref||'el faro'}, escribe ${fA(t.c+180)}, elige Dv y pulsa Trazar.`;
+  if(t.t==='circ')return `Útil Distancia: pulsa ${t.ref||'el centro'}, escribe ${nf(t.r,1)} y pulsa Trazar.`;
+  if(t.t==='seg')return st.dirOnly?'Útil Rumbo: pulsa la salida y acerca el cursor al borde del círculo hasta que marque «tangente».':`Útil Rumbo: pulsa el origen, escribe rumbo ${f3(brg(t.a,t.b),1)} como Rv y distancia ${nf(dist(t.a,t.b),2)} M, y pulsa Trazar. También vale pulsar el punto final.`;
+  return t.kindName==='Paralela'?'Útil Paralela: pulsa la línea que quieres trasladar y luego el punto por el que debe pasar.':`Útil Enfilación: pulsa los dos faros${t.ref?' ('+t.ref+')':''}.`;}
+const fmtQ=st=>st.unit==='°'?(st.label==='Ct'?sg(st.v)+'°':fA(Math.round(st.v*2)/2)):nf(st.v,1)+(st.unit==="'"?"'":' '+st.unit);
+const doneTxt=st=>{const t=st.o;return t.t==='pt'?'Punto: '+fPos(t.p):t.t==='ray'?`Demora ${fA(t.c+180)}${t.ref?' a '+t.ref:''}`:t.t==='circ'?`Círculo de ${nf(t.r,1)} M`:t.t==='seg'?`Tramo ${f3(brg(t.a,t.b),1)} · ${nf(dist(t.a,t.b),1)} M`:t.kindName==='Paralela'?'Demora trasladada':'Línea '+f3(t.c,1)+' / '+f3(t.c+180,1);};
+
+const RANKS=[[0,'Grumete'],[120,'Marinero'],[320,'Timonel'],[650,'Contramaestre'],[1100,'Piloto'],[1700,'Patrón de Yate']];
+const rankOf=xp=>{let i=0;RANKS.forEach((r,k)=>{if(xp>=r[0])i=k;});return i;};
+const onlyG=(g,f)=>()=>tryGen(()=>{const s=g();return s&&f(s[1])?s:null;});
+const MIS=[['La corrección total',()=>GEN.ct()],['Rumbo de aguja entre dos faros',()=>GEN.rumbo()],['Situación por dos demoras',onlyG(GEN.demoras,o=>!o.aguja)],['Demoras de aguja',onlyG(GEN.demoras,o=>o.aguja)],
+ ['Situación por distancias',()=>GEN.distancias()],['Oposición y demora',()=>GEN.lineas()],['Marcaciones',()=>GEN.marc()],['Traslado de demora',()=>GEN.traslado()],['Estima gráfica',()=>GEN.estima()],
+ ['Viento y corriente',()=>GEN.estimaC()],['Rumbo efectivo con corriente',()=>GEN.corrRef()],['Rumbo a gobernar con corriente',()=>GEN.corrRumbo()],['La corriente desconocida',()=>GEN.corrDesc()]];
+const stars=n=>'★'.repeat(n)+'☆'.repeat(3-n),starsH=n=>'★'.repeat(n)+`<i>${'★'.repeat(3-n)}</i>`;
+const misOpen=i=>S.game.open||i===0||S.game.st[i-1]>0;
+function renderQuest(){const gm=S.game,r=rankOf(gm.xp),nx=RANKS[r+1],done=MIS.filter((m,i)=>gm.st[i]>0).length;
+  let next=MIS.findIndex((m,i)=>!gm.st[i]);if(next<0)next=MIS.length-1;
+  const active=S.guide&&S.guide.mis!=null?S.guide:null;
+  learning.catalogOpen=$('#missionCatalog')?.open??learning.catalogOpen;
+  $('#quest').innerHTML=`<div class="quest">
+   <div class="quest-progress"><strong>${done} <span>de ${MIS.length} completadas</span></strong><span>${Math.round(done/MIS.length*100)}%</span></div>
+   <div class="xpbar" role="progressbar" aria-valuenow="${done}" aria-valuemin="0" aria-valuemax="${MIS.length}" aria-label="Misiones completadas"><i style="width:${done/MIS.length*100}%"></i></div>
+   <div class="quest-rank"><span>${RANKS[r][1]} · ${gm.xp} XP</span><span>${nx?`${nx[0]-gm.xp} XP para ${nx[1]}`:'Rango máximo'}</span></div>
+   ${active?'':`<div class="mission-next"><span class="eyebrow">${done===MIS.length?'Recorrido completado':'Tu siguiente misión · '+(next+1)+' de '+MIS.length}</span><strong>${MIS[next][0]}</strong><button class="btn" data-mis="${next}">${done===0?'Empezar primera misión':done===MIS.length?'Repetir última misión':'Continuar recorrido'} <span aria-hidden="true">→</span></button></div>`}
+   <p class="hint">Completa cada misión para desbloquear la siguiente. Las estrellas reflejan tu resultado y los XP hacen subir tu rango.</p>
+   </div>
+   <details class="mission-catalog" id="missionCatalog" ${learning.catalogOpen?'open':''}>
+     <summary>Las ${MIS.length} misiones <span>Temario y progreso</span></summary>
+     <ol class="mission-list">${MIS.map((m,i)=>{
+       const completed=gm.st[i]>0,current=active&&active.mis===i,available=misOpen(i);
+       const status=current?(active.done?'Completada':'En curso'):completed?'Completada':available?(i===next?'Siguiente':'Disponible'):'Completa la misión '+i;
+       return `<li><button data-mis="${i}" class="mission-item ${completed?'is-complete ':''}${current?'is-current':i===next?'is-next':''}" ${available?'':'disabled'} ${current?'aria-current="step"':''}>
+        <span class="mission-number" aria-hidden="true">${completed?'✓':String(i+1).padStart(2,'0')}</span>
+        <span class="mission-copy"><strong>${m[0]}</strong><small>${status}</small></span>
+        ${completed?`<span class="stars" aria-label="${gm.st[i]} de 3 estrellas">${starsH(gm.st[i])}</span>`:available?'<span class="mission-arrow" aria-hidden="true">→</span>':''}
+       </button></li>`;
+     }).join('')}</ol>
+     ${gm.open||done===MIS.length?'':`<div class="mission-unlock"><button class="btn alt" id="misOpen">Desbloquear todas</button><p class="hint">¿Ya tienes experiencia? Accede a cualquier misión sin seguir el orden.</p></div>`}
+   </details>`;
+  $('#chipRank').innerHTML=`<span class="k">${RANKS[r][1]}</span>${gm.xp} XP`;}
+function startMission(i){const spec=MIS[i][1]();if(!spec){flash('No se ha podido preparar la misión. Prueba otra vez.');return;}
+  const x=makeEx(spec);x.shown=false;x.mc=null;x.val='m:'+i;S.ex=x;startGuide(x,i);}
+function startGuide(x,mis){if(!x||!x.guia||!x.guia.length){flash('Este ejercicio no tiene modo guiado.');return;}
+  push();S.objs=[];S.sel=null;S.pend=[];S.dm=0;S.dv=0;S.ctx=null;writeCond();
+  const steps=x.guia.slice();if(x.mc)steps.push({k:'mc',txt:'Marca en el cuaderno la opción que coincide con tu resultado.'});
+  S.guide={x,steps,i:0,pts:0,max:steps.length*10,err:0,hint:0,mis,log:[],fb:'',fbok:true,done:false,lastId:S.nid,ct:0,inVal:''};
+  condChanged();changed();showTab('ejercicios');setLearningTab(mis!=null?'misiones':'practica');$('#panel').hidden=false;renderQuest();syncPracticeControls();fit();enterStep('Carta limpia y Ct a 0°. Sigue los pasos de esta franja.');$('#pane-ejercicios').scrollTop=0;}
+function enterStep(msg){const g=S.guide,st=g.steps[g.i];g.err=0;g.hint=0;g.fb=msg||'';g.fbok=true;g.lastId=S.nid;
+  if(st.k==='d'){S.stripMin=false;setTool(toolOf(st.o));}
+  renderEx();renderGbar();if(st.k==='d')guideCheck();}
+function stepDone(){const g=S.guide,st=g.steps[g.i],p=g.hint>=2?0:g.hint===1?4:Math.max(2,10-3*g.err);g.pts+=p;
+  g.log.push(st.k==='q'?`${st.label} = ${fmtQ(st)}`:st.k==='mc'?'Respuesta: '+'abcd'[g.x.mc.key]+') '+g.x.mc.opts[g.x.mc.key]:doneTxt(st));
+  if(st.setCt!=null){g.ct=st.setCt;S.ctx={k:'ej',ct:st.setCt};condChanged();}
+  if(st.k==='d'){g.lastP=repP(st.o);if(!RM)S.fx.push({p:g.lastP,t:performance.now()/1000,txt:p?'+'+p:''});}
+  g.i++;g.inVal='';
+  if(g.i>=g.steps.length)finishGuide();
+  else enterStep((p===10?'Correcto a la primera':p?'Correcto':'Paso resuelto')+(p?`: +${p} puntos.`:'.')+(st.setCt!=null?` He puesto la Ct en ${sg(st.setCt)}° para que puedas trazar con datos de aguja.`:''));}
+function finishGuide(){const g=S.guide,r=g.pts/g.max;g.stars=r>=.9?3:r>=.6?2:1;g.xp=g.pts+g.stars*10;const r0=rankOf(S.game.xp);S.game.xp+=g.xp;g.up=rankOf(S.game.xp)>r0;
+  if(g.mis!=null)S.game.st[g.mis]=Math.max(S.game.st[g.mis]||0,g.stars);g.done=true;save();
+  if(!RM&&g.lastP){const t=performance.now()/1000;[0,.18,.36].forEach((d,k)=>S.fx.push({p:g.lastP,t:t+d,txt:k?'':stars(g.stars),big:true}));}
+  setTool('mover');renderQuest();renderEx();renderGbar();}
+function endGuide(){const mission=S.guide&&S.guide.mis!=null;S.guide=null;if(mission)S.ex=null;renderGbar();renderEx();renderQuest();}
+function guideCheck(){const g=S.guide;if(!g||g.done)return;const st=g.steps[g.i];if(st.k!=='d')return;
+  const us=S.objs.filter(o=>!o.sol);
+  if(us.some(o=>matchObj(st.o,o,st))){stepDone();return;}
+  const nw=us.filter(o=>o.id>=g.lastId);g.lastId=S.nid;if(!nw.length)return;const o=nw[nw.length-1];
+  if(g.steps.slice(g.i+1).some(s=>s.k==='d'&&matchObj(s.o,o,s))){g.fb='Ese trazo es de un paso posterior: te lo guardo. Ahora toca este.';g.fbok=true;renderGbar();return;}
+  const m=diagnose(st,o);if(m){g.err++;g.fb=m;g.fbok=false;renderGbar();}}
+function checkQ(){const g=S.guide,st=g.steps[g.i],inp=$('#gIn');if(!inp)return;const v=num(inp.value);g.inVal=inp.value;
+  const df=(a,b)=>st.circ?Math.abs(n180(a-b)):Math.abs(a-b);
+  if(isNaN(v)){g.fb='Escribe un número.';g.fbok=false;renderGbar();return;}
+  if(df(v,st.v)<=st.tol){stepDone();return;}
+  g.err++;const al=(st.alt||[]).find(a=>df(v,a[0])<=Math.max(st.tol,.6));
+  g.fb=al?al[1]:'No es eso. Repasa la cuenta o pide una pista.';g.fbok=false;renderGbar();}
+const gbar=$('#gbar');
+function renderGbar(){const g=S.guide;if(!g){gbar.hidden=true;strip.style.top='';return;}
+  gbar.hidden=false;let h;
+  if(g.done)h=`<span class="gstep">Completado</span><span class="gtxt"><b class="stars">${starsH(g.stars)}</b> ${g.pts} de ${g.max} puntos · +${g.xp} XP${g.up?` · Asciendes a <b>${RANKS[rankOf(S.game.xp)][1]}</b>`:''}</span><button class="btn" id="gNext">${g.mis!=null?(g.mis<MIS.length-1?'Siguiente misión':'Repetir misión'):g.x.mc?(g.x.mc.j<g.x.mc.ex.q.length-1?'Siguiente pregunta':'Revisar desde el inicio'):'Otro igual'}</button><button class="btn alt" id="gExit">Salir</button>`;
+  else{const st=g.steps[g.i];
+    h=`<span class="gstep">Paso ${g.i+1} de ${g.steps.length}</span><span class="gtxt">${st.txt}</span>`
+     +(st.k==='q'?`<span class="grp"><label for="gIn">${st.label} =</label><input class="n" id="gIn" inputmode="decimal" autocomplete="off"><label>${st.unit}</label><button class="btn" id="gOk">Comprobar</button></span>`:'')
+     +(st.k==='mc'?'':`<button class="btn alt" id="gHint">${g.hint?'Resolver este paso':'Pista'}</button>`)+`<span class="gxp">${g.pts} pts</span><button class="x" id="gExit" title="Salir del modo guiado" aria-label="Salir del modo guiado">×</button>`
+     +(g.fb?`<div class="gfb ${g.fbok?'ok':'ko'}">${g.fb}</div>`:'')+(g.hint?`<div class="gfb hintl">Pista: ${st.hint||autoHint(st)}</div>`:'');}
+  gbar.innerHTML=h;const inp=$('#gIn');if(inp){inp.value=g.inVal||'';inp.focus();}
+  strip.style.top=(32+gbar.offsetHeight+6)+'px';}
+gbar.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='gIn'){e.preventDefault();checkQ();}});
+gbar.addEventListener('input',e=>{if(e.target.id==='gIn'&&S.guide)S.guide.inVal=e.target.value;});
+function nextGuide(){const g=S.guide;if(!g||!g.done)return;const v=g.x.val,mis=g.mis;
+  if(mis!=null)startMission(Math.min(mis+1,MIS.length-1));
+  else if(v[0]==='e'){const [,i,j]=v.split(':');loadEx(`e:${i}:${(+j+1)%EXAM[+i].q.length}`);if(S.ex.guia?.length)startGuide(S.ex,null);else renderGbar();}
+  else{loadEx(v);startGuide(S.ex,null);}}
+gbar.addEventListener('click',e=>{const b=e.target.closest('button'),g=S.guide;if(!b||!g)return;
+  if(b.id==='gOk')checkQ();
+  if(b.id==='gExit')endGuide();
+  if(b.id==='gHint'){const st=g.steps[g.i];
+    if(!g.hint){g.hint=1;renderGbar();}
+    else{g.hint=2;if(st.k==='d'){const o=JSON.parse(JSON.stringify(st.o));delete o.sol;delete o.id;if(o.t==='pt'&&!o.label)o.label=ptName();push();add(o);changed();}else stepDone();}}
+  if(b.id==='gNext')nextGuide();
+});
+function renderGuide(){const g=S.guide,x=g.x,cur=g.steps[g.i],left=g.steps.length-g.i-1;
+  const mission=g.mis!=null,target=mission?$('#missionBox'):$('#exBox');
+  if(mission)$('#exBox').innerHTML='';
+  target.innerHTML=`<div class="ex guided-activity">
+   ${mission?`<div class="activity-heading"><span class="eyebrow">Misión ${g.mis+1} de ${MIS.length} · ${g.done?'Completada':'En curso'}</span><h3>${MIS[g.mis][0]}</h3></div>`:`<span class="tag">${x.tipo}</span> <span class="tag gm">Paso a paso${x.mc?' · pregunta '+x.mc.n:''}</span>`}
+   <div class="guide-progress"><span>${g.done?'Todos los pasos completados':'Paso '+(g.i+1)+' de '+g.steps.length}</span><span>${g.pts} puntos</span></div><p class="st">${x.html}</p>
+   <ol class="glog">${g.log.map(t=>`<li class="dn">${t}</li>`).join('')}${g.done?'':`<li class="cur">${cur.txt}</li>`}</ol>
+   ${!g.done&&left>0?`<p class="hint">Después quedan ${left} ${left===1?'paso':'pasos'}.</p>`:''}
+   ${!g.done&&cur.k==='mc'?`<div class="ans">${x.mc.opts.map((o,k)=>`<button class="opt" data-gopt="${k}">${'abcd'[k]}) ${o}</button>`).join('')}</div>`:''}
+   ${g.done?`<div class="solres"><b class="stars">${starsH(g.stars)}</b> ${g.pts} de ${g.max} puntos · +${g.xp} XP<br>${x.res}</div>`:''}
+   <div class="row">${mission&&g.done&&g.mis<MIS.length-1?'<button class="btn" id="missionNext">Siguiente misión →</button>':''}<button class="btn alt" id="gExit2">${mission?(g.done?'Volver al recorrido':'Salir de la misión'):'Salir del guiado'}</button></div></div>
+   <p class="hint">Las instrucciones y las respuestas van en la franja de arriba de la carta. Cada paso vale 10 puntos; cada fallo resta 3 y una pista lo deja en 4.</p>`;}
+function drawFx(){if(!S.fx.length)return;const now=performance.now()/1000;S.fx=S.fx.filter(f=>now-f.t<1.2);
+  S.fx.forEach(f=>{const a=(now-f.t)/1.2;if(a<0)return;const [x,y]=scrOf(f.p);ctx.setLineDash([]);ctx.beginPath();ctx.arc(x,y,10+a*(f.big?90:46),0,7);ctx.strokeStyle=`rgba(74,222,128,${(1-a).toFixed(2)})`;ctx.lineWidth=f.big?4:3;ctx.stroke();
+    if(f.txt){ctx.globalAlpha=Math.max(0,1-a*a);text(f.txt,x,y-20-a*28,T.circ,'center',f.big?22:16);ctx.globalAlpha=1;}});}
+
+function loadEx(v){let spec,mc=null;
+  if(v[0]==='f'){const f=FIX[+v.slice(2)];spec=[f[1],f[2]];}
+  else if(v[0]==='e'){const [,i,j]=v.split(':'),x=EXAM[+i],q=x.q[+j];spec=[q[1],q[2]];mc={ex:x,i:+i,j:+j,n:q[0],opts:q[3],key:q[4]};}
+  else spec=GEN[v.slice(2)]();
+  if(!spec){flash('No se ha podido generar el ejercicio. Prueba otra vez.');return;}
+  S.guide=null;S.ex=makeEx(spec);S.ex.shown=false;S.ex.mc=mc;S.ex.val=v;
+  if(mc)$('#examSel').value=String(mc.i);else $('#exSel').value=v;
+  $('#missionBox').innerHTML='';setLearningTab('practica');learning.mode=mc?'examen':'libre';
+  renderEx();renderQuest();renderGbar();$('#exBox').focus();}
+function ansHtml(a,i){
+  if(a.t==='pos')return `<div class="a"><span class="l">l</span><input class="n s" id="ex${i}laD" inputmode="numeric" aria-label="Grados de latitud"><span>°</span><input class="n" id="ex${i}laM" inputmode="decimal" aria-label="Minutos de latitud"><span>' N</span><span id="ex${i}laR"></span></div>
+   <div class="a"><span class="l">L</span><input class="n s" id="ex${i}loD" inputmode="numeric" aria-label="Grados de longitud"><span>°</span><input class="n" id="ex${i}loM" inputmode="decimal" aria-label="Minutos de longitud"><span>' W</span><span id="ex${i}loR"></span></div>`;
+  return `<div class="a"><span class="l">${a.label}</span><input class="n w" id="ex${i}v" inputmode="decimal" aria-label="${a.label}"><span>${a.unit}</span><span id="ex${i}R"></span></div>`;
+}
+function renderEx(){const x=S.ex;
+  if(!x){$('#exBox').innerHTML='';$('#missionBox').innerHTML='';syncPracticeControls();return;}
+  if(S.guide&&S.guide.x===x){renderGuide();syncPracticeControls();return;}
+  const mc=x.mc,L='abcd';
+  let body,top='';
+  if(mc){const st=S.exam[mc.ex.id]||{},ok=mc.ex.q.filter(q=>st[q[0]]===q[4]).length,done=mc.ex.q.filter(q=>st[q[0]]!=null).length;
+    top=`<div class="exam-heading"><strong>${mc.ex.name}</strong><span>${done} de ${mc.ex.q.length} respondidas · ${ok} aciertos</span></div>
+     <nav class="chips" aria-label="Preguntas del examen">${mc.ex.q.map((q,j)=>`<button data-go="e:${mc.i}:${j}" class="${q[0]===mc.n?'cur ':''}${st[q[0]]==null?'':st[q[0]]===q[4]?'good':'badc'}" ${q[0]===mc.n?'aria-current="step"':''} aria-label="Pregunta ${q[0]}${st[q[0]]==null?', sin responder':st[q[0]]===q[4]?', correcta':', incorrecta'}">${q[0]}</button>`).join('')}</nav>
+     <div class="score">${done===mc.ex.q.length?(mc.ex.q.length-ok<=3?'<span class="ok">Bloque completado: apto en carta.</span>':'<span class="ko">Bloque completado: repasa las respuestas incorrectas.</span>'):'Puedes cambiar de pregunta con los números.'}</div>`;
+    const ch=st[mc.n];
+    body=`<div class="ans" role="group" aria-label="Opciones de respuesta">${mc.opts.map((o,k)=>`<label class="opt ${ch==null?'':k===mc.key?'good':k===ch?'badc':''}"><input type="radio" name="exmc" value="${k}" ${ch===k?'checked':''} ${ch==null?'':'disabled'}><span>${L[k]}) ${o}</span></label>`).join('')}</div>
+     ${ch==null?'<p class="hint">Marca una opción para guardar y corregir tu respuesta.</p>':`<div class="answer-feedback ${ch===mc.key?'ok':'ko'}" role="status">${ch===mc.key?'✓ Correcto. Respuesta guardada.':'✗ Respuesta guardada. La opción oficial es la '+L[mc.key]+').'}</div>`}`;
+  }else body=`<div class="ans">${x.ans.map(ansHtml).join('')}</div>`;
+  const helpOpen=$('#exHelp')?.open||x.shown;
+  $('#exBox').innerHTML=`${top}<div class="ex"><span class="tag">${x.tipo}</span> <span class="tag ${mc?'of':''}">${mc?'Pregunta '+mc.n+' · '+(mc.j+1)+' de '+mc.ex.q.length:x.val[0]==='g'?'Ejercicio aleatorio':'Ejemplo de los apuntes'}</span><p class="st">${x.html}</p>${body}
+   <div class="row exercise-actions">${mc?`<button class="btn" id="exNext">${mc.j<mc.ex.q.length-1?'Siguiente pregunta →':'Revisar desde el inicio'}</button>`:'<button class="btn" id="exCheck">Comprobar resultado</button>'}</div>
+   <details class="exercise-help" id="exHelp" ${helpOpen?'open':''}><summary>Ayuda y solución</summary>
+     <div class="row">${x.guia&&x.guia.length?'<button class="btn alt" id="exGuide">Resolver paso a paso</button>':''}<button class="btn alt" id="exShow">${x.shown?'Ocultar solución':'Ver solución explicada'}</button>${x.draw().length?'<button class="btn alt" id="exDraw">Trazar solución</button><button class="btn alt" id="exUndraw">Quitar trazado de solución</button>':''}${x.sim?'<button class="btn alt" id="exSim">Navegar con el barco</button>':''}</div>
+   ${x.shown?`<ol class="steps">${x.pasos.map(p=>`<li>${p}</li>`).join('')}</ol><div class="solres">${mc?`Clave oficial: ${L[mc.key]}) ${mc.opts[mc.key]}<br>Sobre esta carta: `:''}${x.res}</div>`:''}
+   </details></div>
+   ${/\b(Da|Ra|Za)\b|aguja/.test(x.html)?`<div class="note">Este ejercicio da datos <b>de aguja</b>. Los útiles los convierten con la Ct de Condiciones, que ahora es <b id="exCtNow">${sg(Ct())||'0'}°</b>. Ponle la Ct del ejercicio antes de trazar con Da o Ra, o conviértelos tú y traza con Dv y Rv. <button class="btn alt" id="exCt" style="padding:1px 8px;margin-left:4px">Ajustar Ct</button></div>`:''}
+   <p class="hint">${mc?'Preguntas oficiales de Patrón de Yate. Este modo permite consultar ayuda; el bloque de carta admite hasta 3 fallos.':'Resuelve sobre la carta y escribe tu resultado. La solución se calcula sobre esta misma carta y puede diferir unas décimas de la impresa en los apuntes.'}</p>
+   ${mc?'<button class="text-button" id="exReset">Reiniciar respuestas de este examen</button>':''}`;
+   syncPracticeControls();}
+const mark=(el,ok)=>{el.textContent=ok?'✓ correcto':'✗ revisa';el.className=ok?'ok':'ko';};
+$('#pane-ejercicios').addEventListener('change',e=>{const x=S.ex;if(e.target.name==='exmc'&&x&&x.mc){const id=x.mc.ex.id;S.exam[id]=S.exam[id]||{};if(S.exam[id][x.mc.n]==null){S.exam[id][x.mc.n]=+e.target.value;save();}renderEx();$('#exNext')?.focus({preventScroll:true});}});
+$('#pane-ejercicios').addEventListener('click',e=>{const x=S.ex;if(!x)return;
+  const go=e.target.closest('[data-go]');if(go){loadEx(go.dataset.go);return;}
+  if(e.target.id==='exGuide'){startGuide(x,null);return;}
+  if(e.target.id==='gExit2'){endGuide();return;}
+  if(e.target.id==='missionNext'){nextGuide();return;}
+  if(e.target.id==='exNext'&&x.mc){loadEx(`e:${x.mc.i}:${(x.mc.j+1)%x.mc.ex.q.length}`);return;}
+  const gp=e.target.closest('[data-gopt]');if(gp&&S.guide&&!S.guide.done){const g=S.guide;
+    if(x.mc){const id=x.mc.ex.id;S.exam[id]=S.exam[id]||{};if(S.exam[id][x.mc.n]==null){S.exam[id][x.mc.n]=+gp.dataset.gopt;save();}}
+    if(+gp.dataset.gopt===x.mc.key)stepDone();else{g.err++;g.fb='Esa opción no coincide con lo que has obtenido en la carta. Compárala con tu resultado.';g.fbok=false;gp.classList.add('badc');gp.disabled=true;renderGbar();}return;}
+  if(e.target.id==='exSim'&&x.sim){loadSim(x.sim);return;}
+  if(e.target.id==='exCt'){e.stopPropagation();openPop('ct');return;}
+  if(e.target.id==='exReset'){delete S.exam[x.mc.ex.id];save();renderEx();}
+  if(e.target.id==='exShow'){const vals={};$$('#exBox input:not([type=radio])').forEach(i=>vals[i.id]=i.value);x.shown=!x.shown;renderEx();$$('#exBox input:not([type=radio])').forEach(i=>{if(vals[i.id])i.value=vals[i.id];});$('#exShow').focus({preventScroll:true});}
+  if(e.target.id==='exDraw'){push();S.objs=S.objs.filter(o=>!o.sol);x.draw().forEach(o=>add(JSON.parse(JSON.stringify(o))));S.sel=null;changed();flash('Solución trazada en la carta.');}
+  if(e.target.id==='exUndraw'){if(S.objs.some(o=>o.sol)){push();S.objs=S.objs.filter(o=>!o.sol);changed();}}
+  if(e.target.id==='exCheck')x.ans.forEach((a,i)=>{
+    if(a.t==='pos'){const la=num($(`#ex${i}laD`).value)*60+num($(`#ex${i}laM`).value),lo=num($(`#ex${i}loD`).value)*60+num($(`#ex${i}loM`).value);
+      mark($(`#ex${i}laR`),Math.abs(la-latOf(a.p)*60)<=.3);mark($(`#ex${i}loR`),Math.abs(lo+lonOf(a.p)*60)<=.3);}
+    else{const v=num($(`#ex${i}v`).value),d=a.circ?Math.abs(n180(v-a.v)):Math.abs(v-a.v);mark($(`#ex${i}R`),d<=a.tol);}});
+});
+$('#quest').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.mis!=null){if(S.guide&&S.guide.mis===+b.dataset.mis){$('#pane-ejercicios').scrollTop=0;return;}startMission(+b.dataset.mis);}
+  if(b.id==='misOpen'){S.game.open=true;save();renderQuest();}});
+$('#chipRank').onclick=()=>{$('#panel').hidden=false;showTab('ejercicios');setLearningTab('misiones');$('#pane-ejercicios').scrollTop=0;requestAnimationFrame(resize);};
+$('#exLoad').onclick=()=>{
+  if(learning.mode==='examen'){
+    const i=+$('#examSel').value;
+    if(!(S.ex&&S.ex.mc&&S.ex.mc.i===i)){
+      const saved=S.exam[EXAM[i].id]||{},first=EXAM[i].q.findIndex(q=>saved[q[0]]==null);
+      loadEx(`e:${i}:${first<0?0:first}`);
+    }else setLearningTab('practica');
+  }else loadEx($('#exSel').value);
+};
+$('#exSel').onchange=syncPracticeControls;
+$('#examSel').onchange=syncPracticeControls;
+
+/* ---------- Bucle de animación ---------- */
+let lastTs=0;
+function loop(ts){const dt=Math.min(.1,(ts-lastTs)/1000||0);lastTs=ts;
+  if(inert){S.view.tx+=inert.x*dt*1000;S.view.ty+=inert.y*dt*1000;const f=Math.pow(.92,dt*60);inert.x*=f;inert.y*=f;applyView();if(Math.hypot(inert.x,inert.y)<.02)inert=null;}
+  if(zt){const cur=S.view.k,nk=cur+(zt.k-cur)*Math.min(1,dt*14);zoomAt(zt.x,zt.y,nk/cur);if(Math.abs(zt.k-S.view.k)/zt.k<.003)zt=null;}
+  if(sim.run){simStep(dt);barLive();}
+  if(dirty||!RM||sim.run){render(ts/1000);dirty=false;}
+  requestAnimationFrame(loop);}
+
+/* ---------- Arranque ---------- */
+try{const s=JSON.parse(localStorage.getItem('cartaEstrechoPY.v3')||'null');if(s&&Array.isArray(s.objs)){S.objs=s.objs;S.dm=s.dm||0;S.dv=s.dv||0;S.ctx=s.ctx||null;S.nid=s.nid||1000;S.exam=s.exam||{};if(TH[s.tema])S.tema=s.tema;Object.assign(S.cond,s.cond||{});S.stripMin=!!s.stripMin;Object.assign(S.simPar,s.simPar||{});if(s.game&&s.game.st)S.game=s.game;}else throw 0;}
+catch(e){const d={demo:true},P=interLL(LM.almina.p,24,LM.carnero.p,113);
+  [mkRay(LM.almina.p,24,'Punta Almina',d),mkRay(LM.carnero.p,113,'Punta Carnero',d),mkPt(P,'S',d)].forEach(add);}
+writeCond();trInputs();condChanged();setTool('mover');setTema(S.tema);renderList();renderQuest();syncPracticeControls();
+// Landing links open the requested section without starting or clearing an activity.
+const entry=location.hash.slice(1);
+if(['misiones','examenes','practica'].includes(entry)){
+  $('#panel').hidden=false;showTab('ejercicios');
+  setLearningTab(entry==='misiones'?'misiones':'practica');
+  if(entry!=='misiones')setPracticeMode(entry==='examenes'?'examen':'libre');
+}else if(entry==='barco'){$('#panel').hidden=true;setTool('barco');}
+new ResizeObserver(resize).observe(stage);resize();
+// The mobile notebook leaves the header and bottom tool rail available.
+const layoutObserver=new ResizeObserver(()=>{
+  document.body.style.setProperty('--header-height',$('header').getBoundingClientRect().height+'px');
+  document.body.style.setProperty('--rail-height',$('#rail').getBoundingClientRect().height+'px');
+});
+layoutObserver.observe($('header'));layoutObserver.observe($('#rail'));
+new ResizeObserver(updBarH).observe(bar);
+requestAnimationFrame(loop);
+window.__carta={S,LM,brg,dist,dest,PL,fPos,EX,GEN,FIX,EXAM,interLL,plane2px,px2plane,tri,click,setTool,scrOf,loadEx,sim,simSet,setTema,isLand};
+})();
+</script>
+</body>
+</html>
