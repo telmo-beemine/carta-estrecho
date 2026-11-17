@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../theme.css">
 <link rel="stylesheet" href="styles.css">
+<script src="loxodromica.js"></script>
 </head>
 <body data-tema="color">
 <header>
@@ -90,6 +91,8 @@
     <div class="hud num" id="hud"></div>
   </div>
 
+  <section id="loxWorkspace" class="lox-workspace" aria-labelledby="lox-title" hidden></section>
+
   <aside id="panel">
     <div class="tabs" role="tablist">
       <button role="tab" data-tab="trazados" aria-selected="false">Trazados</button>
@@ -147,6 +150,7 @@
         <div class="row"><label for="lxR">Rumbo</label><input class="n s" id="lxR" inputmode="decimal" value="293"><label>° Distancia</label><input class="n s" id="lxD" inputmode="decimal" value="45"><label>M</label></div>
         <div class="res" id="lxRes"></div>
         <div class="hint">Δl = D·cos R · A = D·sen R · ΔL = A / cos lm.</div>
+        <div class="row"><button class="btn alt" id="lxPractice">Practicar loxodrómica paso a paso</button></div>
       </div>
     </div>
     <div class="pane" id="pane-ejercicios">
@@ -893,8 +897,8 @@ function tri(mode,x){
   if(mode==='c'){const r=vec(x.ref,x.vef),c=vec(x.rc,x.ih),v={e:r.e-c.e,n:r.n-c.n};return {rv:vb(v),vm:vm(v),rc:x.rc,ih:x.ih,ref:x.ref,vef:x.vef};}
   const r=vec(x.ref,x.vef),v=vec(x.rv,x.vm),c={e:r.e-v.e,n:r.n-v.n};return {rv:x.rv,vm:x.vm,rc:vb(c),ih:vm(c),ref:x.ref,vef:x.vef};
 }
-function lox(la,lo,R,D){const dl=D*Math.cos(rad(R)),A=D*Math.sin(rad(R)),la2=la+dl/60,lm=(la+la2)/2,dL=A/Math.cos(rad(lm));return {la:la2,lo:lo+dL/60,dl,A,lm,dL};}
-function loxInv(la1,lo1,la2,lo2){const dl=(la2-la1)*60,dL=(lo2-lo1)*60,lm=(la1+la2)/2,A=dL*Math.cos(rad(lm));return {dl,dL,lm,A,R:norm(deg(Math.atan2(A,dl))),D:Math.hypot(dl,A)};}
+function lox(la,lo,R,D){return Loxodromica.direct(la,lo,R,D);}
+function loxInv(la1,lo1,la2,lo2){return Loxodromica.inverse(la1,lo1,la2,lo2);}
 const TRF={a:[['rv','Rumbo Rv / Rs',135],['vm','Vm',8],['rc','Rc',180],['ih','Ihc',3]],b:[['ref','Rumbo efectivo',90],['vm','Vm',8],['rc','Rc',225],['ih','Ihc',3]],
  c:[['ref','Rumbo efectivo',90],['vef','Vef',5],['rc','Rc',180],['ih','Ihc',2]],d:[['rv','Rumbo Rv / Rs',135],['vm','Vm',8],['ref','Rumbo efectivo',120],['vef','Vef',9]]};
 function trInputs(){$('#trIn').innerHTML='<div class="row">'+TRF[$('#trMode').value].map(([k,l,v])=>`<label for="tr_${k}">${l}</label><input class="n s" id="tr_${k}" inputmode="decimal" value="${S.cond.ih>0&&k==='rc'?f3(S.cond.rc).slice(0,3):S.cond.ih>0&&k==='ih'?n01(S.cond.ih):v}">`).join('')+'</div>';
@@ -919,7 +923,7 @@ function calcAll(){
     $('#trRes').innerHTML=`Rv/Rs ${B('rv',f3(t.rv,1))} · Vm ${B('vm',nf(t.vm,2)+' kn')}<br>Rc ${B('rc',f3(t.rc,1))} · Ihc ${B('ih',nf(t.ih,2)+' kn')}<br>Ref ${B('ref',f3(t.ref,1))} · Vef ${B('vef',nf(t.vef,2)+' kn')}<br>Ra = Rv − Ct = ${f3(t.rv-Ct(),1)}`;}
   const la=(num($('#lxLaD').value)+num($('#lxLaM').value)/60)*+$('#lxLaS').value,lo=(num($('#lxLoD').value)+num($('#lxLoM').value)/60)*+$('#lxLoS').value,R=num($('#lxR').value),Dd=num($('#lxD').value);
   if([la,lo,R,Dd].some(isNaN))$('#lxRes').textContent='Rellena salida, rumbo y distancia.';
-  else{const q=lox(la,lo,R,Dd);$('#lxRes').innerHTML=`Δl = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} · A = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}<br>lm = ${fLat(q.lm)} · ΔL = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}<br>Llegada: <b>${fLat(q.la)} · ${fLon(q.lo)}</b>`;}
+  else{try{const q=lox(la,lo,R,Dd);$('#lxRes').innerHTML=`Δl = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} · A = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}<br>lm = ${fLat(q.lm)} · ΔL = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}<br>Llegada: <b>${fLat(q.la)} · ${fLon(q.lo)}</b>`;}catch(error){$('#lxRes').textContent=error.message;}}
 }
 function triObjs(p,t,x){const tip=dest(p,t.rc,t.ih),q=dest(p,t.ref,t.vef);return [mkSeg(p,tip,'rc',x),mkSeg(tip,q,'rv',x),mkSeg(p,q,'ref',x)];}
 $('#trMode').onchange=()=>{trInputs();calcAll();};
@@ -1037,15 +1041,12 @@ const EX={
   pasos.push(`Desde la salida traza el ${o.ab?'Rs':'Rv'} y lleva ${nf(o.vm,0)} kn × ${o.t} min = ${nf(dn,1)} M.`,`Desde ese extremo traza la corriente: Rc ${f3(o.rc)} y ${nf(o.ih,1)} kn × ${o.t} min = ${nf(dc,1)} M.`,`El extremo de la corriente es la situación: ${fPos(P)}.`);
   return {tipo:'Estima con viento y corriente',html:`A HRB ${o.h0}, situados en ${fPos(o.p)}, se navega al Ra = ${f3(o.ra)} con Vm = ${nf(o.vm,0)} kn. ${ctTxt(o)}${o.ab?`. Viento de ${WN[o.w]} que abate ${o.ab}°`:''}. Corriente de Rc = ${f3(o.rc)} e Ihc = ${nf(o.ih,1)} kn. Calcula la situación a HRB ${o.h1}.`,
    ans:[aPos(P)],pasos,res:fPos(P),draw:()=>[mkPt(o.p,'A',X),mkSeg(o.p,A,'rv',X),mkSeg(A,P,'rc',X),mkSeg(o.p,P,'ref',X),mkPt(P,'S',X)],sim:{p:o.p,ra:o.ra,dm:o.ct!=null?o.ct:o.dm,dv:o.ct!=null?0:o.dv,vm:o.vm,w:o.w,ab:o.ab,rc:o.rc,ih:o.ih,h0:o.h0}};},
- loxDir(o){const D=o.v*o.h,q=lox(o.lat,o.lon,o.rd,D),res=`l = ${fLat(q.la)} · L = ${fLon(q.lo)}`;
-  return {tipo:'Estima analítica',html:`A HRB ${o.h0}, en l = ${fLat(o.lat)} · L = ${fLon(o.lon)}, se navega al rumbo directo Rd = ${f3(o.rd)} con velocidad efectiva de ${nf(o.v,1)} kn. Calcula la situación a HRB ${o.h1}. Queda fuera de la carta: se resuelve por estima analítica.`,
-   ans:[aNum('l (minutos)',(q.la-Math.floor(q.la))*60,.3,"' N de "+Math.floor(q.la)+'°'),aNum('L (minutos)',(Math.abs(q.lo)-Math.floor(Math.abs(q.lo)))*60,.4,"' W de "+Math.floor(Math.abs(q.lo))+'°')],
-   pasos:[`Distancia = ${nf(o.v,1)} kn × ${o.h} h = ${nf(D,1)} M.`,`Δl = D · cos R = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} → l = ${fLat(q.la)}.`,`A = D · sen R = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}; latitud media lm = ${fLat(q.lm)}.`,`ΔL = A / cos lm = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'} → L = ${fLon(q.lo)}.`],res,draw:()=>[]};},
- loxInv(o){const q=loxInv(o.la1,o.lo1,o.la2,o.lo2),qd=(Math.abs(n180(q.R))>90?'S':'N')+nf(Math.min(q.R%180,180-q.R%180),1)+'°'+(q.R>180?'W':'E');
-  return {tipo:'Estima analítica',html:`Salida en l = ${fLat(o.la1)} · L = ${fLon(o.lo1)} y llegada en l' = ${fLat(o.la2)} · L' = ${fLon(o.lo2)}. Calcula ${o.ask==='d'?'la distancia directa':'el rumbo directo'}.`,
-   ans:o.ask==='d'?[aNum('Distancia',q.D,.5,'M')]:[aNum('Rd',q.R,1.5,'°',true)],
-   pasos:[`Δl = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'} · ΔL = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'} · latitud media lm = ${fLat(q.lm)}.`,`Apartamiento A = ΔL · cos lm = ${nf(Math.abs(q.A),1)}'.`,Math.abs(q.dl)<.05?`Misma latitud: el rumbo es ${f3(q.R)} y la distancia es el apartamiento, ${nf(q.D,1)} M.`:`tg R = A / Δl = ${nf(Math.abs(q.A/q.dl),3)} → R = ${qd} = ${f3(q.R)}. Distancia = Δl / cos R = ${nf(q.D,1)} M.`],
-   res:`Rd = ${f3(q.R)} · D = ${nf(q.D,1)} M`,draw:()=>[]};},
+ loxDir(o){const model=Loxodromica.lesson('loxDir',o);
+  return {tipo:'Loxodrómica · problema directo',html:`Salida en l = ${fLat(o.lat)} · L = ${fLon(o.lon)}. Se navega al rumbo directo Rd = ${f3(o.rd)}, con velocidad efectiva ${nf(o.v,1)} kn, durante ${nf(o.h,2)} h${o.h0&&o.h1?' (HRB '+o.h0+' → '+o.h1+')':''}. Calcula la situación de llegada.`,
+   ans:[],pasos:model.steps.map(step=>step.calculation),res:model.result,draw:()=>[]};},
+ loxInv(o){const model=Loxodromica.lesson('loxInv',o),q=model.q;
+  return {tipo:'Loxodrómica · problema inverso',html:`Salida en l = ${fLat(o.la1)} · L = ${fLon(o.lo1)} y llegada en l = ${fLat(o.la2)} · L = ${fLon(o.lo2)}. Calcula ${o.ask==='d'?'la distancia directa':'el rumbo directo'}.`,
+   ans:o.ask==='d'?[aNum('Distancia',q.D,.5,'M')]:[aNum('Rd',q.R,1,'°',true)],pasos:model.steps.map(step=>step.calculation),res:model.result,draw:()=>[]};},
  info(o){return {tipo:o.tipo,html:o.html,ans:[],pasos:o.pasos,res:o.res,draw:()=>[]};}
 };
 function tryGen(f,fb){for(let i=0;i<400;i++){const r=f();if(r)return r;}return fb;}
@@ -1079,7 +1080,10 @@ const GEN={
    return ['estima',{lm,card,d,dm,legs,h0:hhmm(rint(8,18)*60)}];}),
  estimaC:()=>tryGen(()=>{const p=roundPos(randSea()),c=rCt(),rv=rint(0,71)*5,w=pk(Object.keys(WIND)),rel=norm(WIND[w]-rv);if(Math.min(rel,360-rel)<35||Math.abs(rel-180)<35)return;
    const o={p,ra:norm(rv-c.dm-c.dv),...c,vm:rint(6,12),w,ab:pk([3,5,8]),rc:rint(0,35)*10,ih:pk([1,1.5,2,2.5]),t:pk([45,60,90])},h0=rint(6,20)*60;o.h0=hhmm(h0);o.h1=hhmm(h0+o.t);
-   const ex=EX.estimaC(o);if(!inSea(ex.ans[0].p))return;return ['estimaC',o];})
+   const ex=EX.estimaC(o);if(!inSea(ex.ans[0].p))return;return ['estimaC',o];}),
+ loxDir:()=>{const h=pk([2,3,4.5,6,8]),h0=rint(6,12)*60;return ['loxDir',{lat:pk([28,36,39,-32])+rint(0,50)/60,lon:pk([-6,-15,2,12])+rint(0,50)/60,rd:pk([25,70,105,145,210,255,293,325]),v:pk([5,6,7.5,8,10]),h,h0:hhmm(h0),h1:hhmm(h0+h*60)}];},
+ loxCourse:()=>{const la1=pk([28,36,39,-32]),lo1=pk([-6,-15,2,12]),q=lox(la1,lo1,pk([25,90,135,180,225,270,304,335]),rint(30,160));return ['loxInv',{la1,lo1,la2:Math.round(q.la*600)/600,lo2:Math.round(q.lo*600)/600,ask:'rd'}];},
+ loxDistance:()=>{const la1=pk([28,36,39,-32]),lo1=pk([-6,-15,2,12]),q=lox(la1,lo1,pk([0,45,90,135,225,270,315]),rint(30,160));return ['loxInv',{la1,lo1,la2:Math.round(q.la*600)/600,lo2:Math.round(q.lo*600)/600,ask:'d'}];}
 };
 const FIX=[
  ['Ct por oposición (4.1.3)','ct',{a:'cires',b:'tarifa',modo:'opo',obs:'tarifa',Da:320}],
@@ -1094,6 +1098,11 @@ const FIX=[
  ['Corriente conocida: Ref y Vef (4.5.1 a)','corrRef',{p:PL(36,-6-10/60),ra:140,dm:-4,dv:-1,vm:8,rc:180,ih:3}],
  ['Corriente conocida: rumbo a gobernar (4.5.1 b)','corrRumbo',{p:PL(35+55/60,-6-12/60),lm:'espartel',card:0,d:3,vm:8,rc:225,ih:3,dm:-4,dv:-1}]
 ];
+FIX.push(
+ ['Loxodrómica directa · situación de llegada','loxDir',{lat:36,lon:-(6+20/60),rd:293,v:7.5,h:6,h0:'04:00',h1:'10:00'}],
+ ['Loxodrómica inversa · rumbo y cuadrante NW','loxInv',{la1:36,lo1:-(6+20/60),la2:36+50/60,lo2:-(7+53/60),ask:'rd'}],
+ ['Loxodrómica · distancia en un paralelo','loxInv',{la1:39+26/60,lo1:2.5,la2:39+26/60,lo2:-.3,ask:'d'}]
+);
 /* Exámenes oficiales de Patrón de Yate (Cataluña), bloque de carta: mismos datos, opciones y clave; enunciado y solución redactados aquí */
 const P4=(a,b,c,d)=>[a,b,c,d].map(s=>'l = '+s[0]+' · L = '+s[1]);
 const MAREA=(hpa,corr)=>['Busca en el Anuario de Mareas de 2026 las horas y alturas de la pleamar y la bajamar de Cádiz entre las que cae la hora pedida.','Interpola la altura de la marea a esa hora (TU).',`Corrige por presión: 1 cm por cada hPa de diferencia con 1013 hPa. Con ${hpa} hPa la corrección es ${corr}.`,'Sm = Sc + altura de marea + corrección por presión.','Esta carta no incluye el Anuario, así que aquí solo figura la respuesta oficial.'];
@@ -1121,9 +1130,10 @@ const EXAM=[
   [19,'loxInv',{la1:39+26/60,lo1:2.5,la2:39+26/60,lo2:-.3,ask:'d'},['D = 106,7 M','D = 129,8 M','D = 168,0 M','D = 217,5 M'],1],
   [20,'info',{tipo:'Mareas',html:'El 20 de junio de 2026, en el puerto de <b>Cádiz</b>, la sonda en la carta es Sc = 2,4 m y la presión 1030 hPa. Calcula la sonda en el momento a TU = 12:00.',pasos:MAREA(1030,'−0,17 m'),res:'Sm = 3,74 m (clave oficial)'},['Sm = 4,41 m','Sm = 4,08 m','Sm = 3,74 m','Sm = 2,63 m'],2]]}
 ];
-const GN={ct:'Corrección total por oposición',rumbo:'Rumbo y distancia',demoras:'Situación por dos demoras',distancias:'Situación por distancias',lineas:'Oposición y demora',marc:'Situación por marcaciones',corrRef:'Corriente: rumbo efectivo',corrRumbo:'Corriente: rumbo a gobernar',corrDesc:'Corriente desconocida',traslado:'Traslado de demora',estima:'Estima gráfica',estimaC:'Estima con viento y corriente'};
+const GN={loxDir:'Loxodrómica · calcular llegada',loxCourse:'Loxodrómica · calcular rumbo',loxDistance:'Loxodrómica · calcular distancia',ct:'Corrección total por oposición',rumbo:'Rumbo y distancia',demoras:'Situación por dos demoras',distancias:'Situación por distancias',lineas:'Oposición y demora',marc:'Situación por marcaciones',corrRef:'Corriente: rumbo efectivo',corrRumbo:'Corriente: rumbo a gobernar',corrDesc:'Corriente desconocida',traslado:'Traslado de demora',estima:'Estima gráfica',estimaC:'Estima con viento y corriente'};
 $('#examSel').innerHTML=EXAM.map((x,i)=>`<option value="${i}">${x.name}</option>`).join('');
-$('#exSel').innerHTML='<optgroup label="Aleatorios · datos nuevos cada vez">'+Object.keys(GEN).map(k=>`<option value="g:${k}">${GN[k]}</option>`).join('')+'</optgroup><optgroup label="Ejemplos de los apuntes · UT-4">'+FIX.map((f,i)=>`<option value="f:${i}">${f[0]}</option>`).join('')+'</optgroup>';
+const loxTopics=['loxDir','loxCourse','loxDistance'];
+$('#exSel').innerHTML='<optgroup label="Cálculo · loxodrómica">'+loxTopics.map(k=>`<option value="g:${k}">${GN[k]}</option>`).join('')+'</optgroup><optgroup label="Carta · ejercicios aleatorios">'+Object.keys(GEN).filter(k=>!loxTopics.includes(k)).map(k=>`<option value="g:${k}">${GN[k]}</option>`).join('')+'</optgroup><optgroup label="Ejemplos de los apuntes · UT-4">'+FIX.map((f,i)=>`<option value="f:${i}">${f[0]}</option>`).join('')+'</optgroup>';
 
 /* Learning tabs only change the view. Opening an activity is an explicit action. */
 const learning={tab:'misiones',mode:'examen',catalogOpen:false};
@@ -1156,7 +1166,8 @@ function syncPracticeControls(){
   }else{
     const random=$('#exSel').value.startsWith('g:');
     $('#exLoad').textContent=random?(same?'Generar otro ejercicio':'Generar ejercicio'):'Abrir ejemplo';
-    $('#practiceHint').textContent=random?'Cada ejercicio usa datos nuevos del tema elegido. Resuelve y comprueba tu resultado.':'Un ejemplo de los apuntes UT-4, con datos fijos y solución explicada.';
+    const analytic=['g:loxDir','g:loxCourse','g:loxDistance'].includes($('#exSel').value);
+    $('#practiceHint').textContent=analytic?'Ejercicio de cálculo: situación de llegada, rumbo o distancia, con hoja de trabajo y calculadora DEG.':random?'Cada ejercicio usa datos nuevos del tema elegido. Resuelve y comprueba tu resultado.':'Un ejemplo de los apuntes UT-4, con datos fijos y solución explicada.';
     $('#practiceEmpty').textContent='Elige un tema aleatorio o un ejemplo de los apuntes para empezar. Aquí no hay orden ni desbloqueos.';
   }
 }
@@ -1247,16 +1258,9 @@ const GUIDE={
  estimaC(o,d){const ct=ctOf(o),rv=o.ra+ct,ab=o.ab?o.ab*abSign(o.w,rv):0,rs=rv+ab,dn=o.vm*o.t/60,dc=o.ih*o.t/60,s=[gD(d[0],'Sitúa la salida del enunciado con el útil Punto.',{coord:true}),qCt(o),qRv(o.ra,ct)];
   if(o.ab)s.push(qWind('Rs',rv,ab,o.w,1));
   s.push(gD(d[1],`Traza el ${o.ab?'Rs':'Rv'} ${fA(norm(rs))} con ${nf(o.vm,0)} kn × ${o.t} min = ${nf(dn,1)} M.`),gD(d[2],`Desde ese extremo traza la corriente: rumbo ${f3(o.rc)} y ${nf(o.ih,1)} kn × ${o.t} min = ${nf(dc,1)} M.`),gD(d[4],'Marca el extremo de la corriente: es la situación.'));return s;},
- loxDir(o){const Dn=o.v*o.h,q=lox(o.lat,o.lon,o.rd,Dn);return [gQ('Distancia',Dn,.3,'M','¿Cuántas millas se navegan? D = V × t.',`${nf(o.v,1)} × ${o.h} = ${nf(Dn,1)} M.`),
-   gQ('Δl',Math.abs(q.dl),.3,"'",'Diferencia de latitud: Δl = D · cos R. Dala en minutos, sin signo.',`${nf(Dn,1)} × cos ${o.rd}° = ${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'}.`,{alt:[[Math.abs(q.A),'Ese es el apartamiento (seno). La diferencia de latitud va con el coseno.']]}),
-   gQ('A',Math.abs(q.A),.4,"'",'Apartamiento: A = D · sen R, sin signo.',`${nf(Dn,1)} × sen ${o.rd}° = ${nf(Math.abs(q.A),1)}' ${q.A>=0?'E':'W'}.`),
-   gQ('ΔL',Math.abs(q.dL),.5,"'",`El apartamiento son millas, no minutos de longitud. Con la latitud media lm = ${fLat(q.lm)}: ΔL = A / cos lm.`,`${nf(Math.abs(q.A),1)} / cos lm = ${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}.`,{alt:[[Math.abs(q.A),'Falta dividir por el coseno de la latitud media.']]})];},
- loxInv(o){const q=loxInv(o.la1,o.lo1,o.la2,o.lo2),s=[gQ('Δl',Math.abs(q.dl),.3,"'",'Diferencia de latitud entre salida y llegada, en minutos y sin signo.',`${nf(Math.abs(q.dl),1)}' ${q.dl>=0?'N':'S'}.`),
-   gQ('ΔL',Math.abs(q.dL),.5,"'",'Diferencia de longitud, en minutos y sin signo. Si una es E y la otra W, se suman.',`${nf(Math.abs(q.dL),1)}' ${q.dL>=0?'E':'W'}.`),
-   gQ('A',Math.abs(q.A),.5,"'",`Pasa la diferencia de longitud a millas con la latitud media lm = ${fLat(q.lm)}: A = ΔL · cos lm.`,`${nf(Math.abs(q.dL),1)} × cos lm = ${nf(Math.abs(q.A),1)}.`)];
-  s.push(o.ask==='d'?gQ('Distancia',q.D,.5,'M',Math.abs(q.dl)<.05?'Misma latitud: la distancia es el apartamiento.':'D = Δl / cos R.',`${nf(q.D,1)} M.`):gQ('Rd',q.R,1.5,'°','tg R = A / Δl. Da el rumbo de 000° a 360° según el cuadrante.',`Rd = ${f3(q.R)}.`,{circ:true,alt:[[norm(360-q.R),'El ángulo está bien, pero el cuadrante no: mira si vas hacia el E o hacia el W.'],[norm(180-q.R),'El ángulo está bien, pero el cuadrante no: mira si vas hacia el N o hacia el S.']]}));return s;}
+
 };
-function makeEx(spec){const x=EX[spec[0]](spec[1]);x.spec=spec;try{x.guia=GUIDE[spec[0]]?GUIDE[spec[0]](spec[1],x.draw()):null;}catch(e){x.guia=null;}return x;}
+function makeEx(spec){const x=EX[spec[0]](spec[1]);x.spec=spec;try{x.guia=!isLoxExercise(x)&&GUIDE[spec[0]]?GUIDE[spec[0]](spec[1],x.draw()):null;}catch(e){x.guia=null;}return x;}
 
 const toolOf=o=>({pt:'punto',ray:'demora',circ:'circ',seg:'rumbo',line:o.kindName==='Paralela'?'paralela':'enfil'}[o.t]);
 const repP=o=>o.t==='circ'?o.c:o.t==='seg'?o.b:o.p;
@@ -1328,7 +1332,8 @@ function renderQuest(){const gm=S.game,r=rankOf(gm.xp),nx=RANKS[r+1],done=MIS.fi
   $('#chipRank').innerHTML=`<span class="k">${RANKS[r][1]}</span>${gm.xp} XP`;}
 function startMission(i){const spec=MIS[i][1]();if(!spec){flash('No se ha podido preparar la misión. Prueba otra vez.');return;}
   const x=makeEx(spec);x.shown=false;x.mc=null;x.val='m:'+i;S.ex=x;startGuide(x,i);}
-function startGuide(x,mis){if(!x||!x.guia||!x.guia.length){flash('Este ejercicio no tiene modo guiado.');return;}
+function startGuide(x,mis){if(isLoxExercise(x)){openLoxSheet(x);return;}if(!x||!x.guia||!x.guia.length){flash('Este ejercicio no tiene modo guiado.');return;}
+  setWorkspace('carta');
   push();S.objs=[];S.sel=null;S.pend=[];S.dm=0;S.dv=0;S.ctx=null;writeCond();
   const steps=x.guia.slice();if(x.mc)steps.push({k:'mc',txt:'Marca en el cuaderno la opción que coincide con tu resultado.'});
   S.guide={x,steps,i:0,pts:0,max:steps.length*10,err:0,hint:0,mis,log:[],fb:'',fbok:true,done:false,lastId:S.nid,ct:0,inVal:''};
@@ -1401,6 +1406,21 @@ function drawFx(){if(!S.fx.length)return;const now=performance.now()/1000;S.fx=S
   S.fx.forEach(f=>{const a=(now-f.t)/1.2;if(a<0)return;const [x,y]=scrOf(f.p);ctx.setLineDash([]);ctx.beginPath();ctx.arc(x,y,10+a*(f.big?90:46),0,7);ctx.strokeStyle=`rgba(74,222,128,${(1-a).toFixed(2)})`;ctx.lineWidth=f.big?4:3;ctx.stroke();
     if(f.txt){ctx.globalAlpha=Math.max(0,1-a*a);text(f.txt,x,y-20-a*28,T.circ,'center',f.big?22:16);ctx.globalAlpha=1;}});}
 
+/* Analytic exercises use a calculation workspace while keeping chart drawings intact. */
+const isLoxExercise=x=>!!x&&['loxDir','loxInv'].includes(x.spec?.[0]);
+let loxSheet=null;
+function setWorkspace(mode){
+  const analytic=mode==='lox';document.body.dataset.workspace=analytic?'lox':'carta';
+  $('#loxWorkspace').hidden=!analytic;
+  $('#stage').inert=analytic;$('#rail').inert=analytic;
+  requestAnimationFrame(resize);
+}
+function openLoxSheet(x=S.ex){
+  if(!isLoxExercise(x))return;
+  if(!loxSheet)loxSheet=Loxodromica.mount($('#loxWorkspace'),{onReturn:()=>setWorkspace('carta')});
+  loxSheet.setExercise(x);setWorkspace('lox');
+  if(matchMedia('(max-width:860px)').matches)$('#panel').hidden=true;
+}
 function loadEx(v){let spec,mc=null;
   if(v[0]==='f'){const f=FIX[+v.slice(2)];spec=[f[1],f[2]];}
   else if(v[0]==='e'){const [,i,j]=v.split(':'),x=EXAM[+i],q=x.q[+j];spec=[q[1],q[2]];mc={ex:x,i:+i,j:+j,n:q[0],opts:q[3],key:q[4]};}
@@ -1409,7 +1429,7 @@ function loadEx(v){let spec,mc=null;
   S.guide=null;S.ex=makeEx(spec);S.ex.shown=false;S.ex.mc=mc;S.ex.val=v;
   if(mc)$('#examSel').value=String(mc.i);else $('#exSel').value=v;
   $('#missionBox').innerHTML='';setLearningTab('practica');learning.mode=mc?'examen':'libre';
-  renderEx();renderQuest();renderGbar();$('#exBox').focus();}
+  renderEx();renderQuest();renderGbar();if(isLoxExercise(S.ex))openLoxSheet();else{setWorkspace('carta');$('#exBox').focus();}}
 function ansHtml(a,i){
   if(a.t==='pos')return `<div class="a"><span class="l">l</span><input class="n s" id="ex${i}laD" inputmode="numeric" aria-label="Grados de latitud"><span>°</span><input class="n" id="ex${i}laM" inputmode="decimal" aria-label="Minutos de latitud"><span>' N</span><span id="ex${i}laR"></span></div>
    <div class="a"><span class="l">L</span><input class="n s" id="ex${i}loD" inputmode="numeric" aria-label="Grados de longitud"><span>°</span><input class="n" id="ex${i}loM" inputmode="decimal" aria-label="Minutos de longitud"><span>' W</span><span id="ex${i}loR"></span></div>`;
@@ -1418,7 +1438,7 @@ function ansHtml(a,i){
 function renderEx(){const x=S.ex;
   if(!x){$('#exBox').innerHTML='';$('#missionBox').innerHTML='';syncPracticeControls();return;}
   if(S.guide&&S.guide.x===x){renderGuide();syncPracticeControls();return;}
-  const mc=x.mc,L='abcd';
+  const mc=x.mc,L='abcd',analytic=isLoxExercise(x);
   let body,top='';
   if(mc){const st=S.exam[mc.ex.id]||{},ok=mc.ex.q.filter(q=>st[q[0]]===q[4]).length,done=mc.ex.q.filter(q=>st[q[0]]!=null).length;
     top=`<div class="exam-heading"><strong>${mc.ex.name}</strong><span>${done} de ${mc.ex.q.length} respondidas · ${ok} aciertos</span></div>
@@ -1427,22 +1447,23 @@ function renderEx(){const x=S.ex;
     const ch=st[mc.n];
     body=`<div class="ans" role="group" aria-label="Opciones de respuesta">${mc.opts.map((o,k)=>`<label class="opt ${ch==null?'':k===mc.key?'good':k===ch?'badc':''}"><input type="radio" name="exmc" value="${k}" ${ch===k?'checked':''} ${ch==null?'':'disabled'}><span>${L[k]}) ${o}</span></label>`).join('')}</div>
      ${ch==null?'<p class="hint">Marca una opción para guardar y corregir tu respuesta.</p>':`<div class="answer-feedback ${ch===mc.key?'ok':'ko'}" role="status">${ch===mc.key?'✓ Correcto. Respuesta guardada.':'✗ Respuesta guardada. La opción oficial es la '+L[mc.key]+').'}</div>`}`;
-  }else body=`<div class="ans">${x.ans.map(ansHtml).join('')}</div>`;
+  }else body=analytic?'<p class="hint">Resuelve las coordenadas, el rumbo y la distancia en la hoja de cálculo. Cada paso tiene su propia comprobación.</p>':`<div class="ans">${x.ans.map(ansHtml).join('')}</div>`;
   const helpOpen=$('#exHelp')?.open||x.shown;
   $('#exBox').innerHTML=`${top}<div class="ex"><span class="tag">${x.tipo}</span> <span class="tag ${mc?'of':''}">${mc?'Pregunta '+mc.n+' · '+(mc.j+1)+' de '+mc.ex.q.length:x.val[0]==='g'?'Ejercicio aleatorio':'Ejemplo de los apuntes'}</span><p class="st">${x.html}</p>${body}
-   <div class="row exercise-actions">${mc?`<button class="btn" id="exNext">${mc.j<mc.ex.q.length-1?'Siguiente pregunta →':'Revisar desde el inicio'}</button>`:'<button class="btn" id="exCheck">Comprobar resultado</button>'}</div>
+   <div class="row exercise-actions">${mc?`<button class="btn" id="exNext">${mc.j<mc.ex.q.length-1?'Siguiente pregunta →':'Revisar desde el inicio'}</button>`:analytic?'':'<button class="btn" id="exCheck">Comprobar resultado</button>'}${analytic?'<button class="btn alt" id="exWorksheet">Abrir hoja de cálculo</button>':''}</div>
    <details class="exercise-help" id="exHelp" ${helpOpen?'open':''}><summary>Ayuda y solución</summary>
      <div class="row">${x.guia&&x.guia.length?'<button class="btn alt" id="exGuide">Resolver paso a paso</button>':''}<button class="btn alt" id="exShow">${x.shown?'Ocultar solución':'Ver solución explicada'}</button>${x.draw().length?'<button class="btn alt" id="exDraw">Trazar solución</button><button class="btn alt" id="exUndraw">Quitar trazado de solución</button>':''}${x.sim?'<button class="btn alt" id="exSim">Navegar con el barco</button>':''}</div>
    ${x.shown?`<ol class="steps">${x.pasos.map(p=>`<li>${p}</li>`).join('')}</ol><div class="solres">${mc?`Clave oficial: ${L[mc.key]}) ${mc.opts[mc.key]}<br>Sobre esta carta: `:''}${x.res}</div>`:''}
    </details></div>
    ${/\b(Da|Ra|Za)\b|aguja/.test(x.html)?`<div class="note">Este ejercicio da datos <b>de aguja</b>. Los útiles los convierten con la Ct de Condiciones, que ahora es <b id="exCtNow">${sg(Ct())||'0'}°</b>. Ponle la Ct del ejercicio antes de trazar con Da o Ra, o conviértelos tú y traza con Dv y Rv. <button class="btn alt" id="exCt" style="padding:1px 8px;margin-left:4px">Ajustar Ct</button></div>`:''}
-   <p class="hint">${mc?'Preguntas oficiales de Patrón de Yate. Este modo permite consultar ayuda; el bloque de carta admite hasta 3 fallos.':'Resuelve sobre la carta y escribe tu resultado. La solución se calcula sobre esta misma carta y puede diferir unas décimas de la impresa en los apuntes.'}</p>
+   <p class="hint">${analytic?'Ejercicio de cálculo por latitud media. Trabaja en la hoja; no necesitas situar estos puntos en la carta L105.':mc?'Preguntas oficiales de Patrón de Yate. Este modo permite consultar ayuda; el bloque de carta admite hasta 3 fallos.':'Resuelve sobre la carta y escribe tu resultado. La solución se calcula sobre esta misma carta y puede diferir unas décimas de la impresa en los apuntes.'}</p>
    ${mc?'<button class="text-button" id="exReset">Reiniciar respuestas de este examen</button>':''}`;
    syncPracticeControls();}
 const mark=(el,ok)=>{el.textContent=ok?'✓ correcto':'✗ revisa';el.className=ok?'ok':'ko';};
 $('#pane-ejercicios').addEventListener('change',e=>{const x=S.ex;if(e.target.name==='exmc'&&x&&x.mc){const id=x.mc.ex.id;S.exam[id]=S.exam[id]||{};if(S.exam[id][x.mc.n]==null){S.exam[id][x.mc.n]=+e.target.value;save();}renderEx();$('#exNext')?.focus({preventScroll:true});}});
 $('#pane-ejercicios').addEventListener('click',e=>{const x=S.ex;if(!x)return;
   const go=e.target.closest('[data-go]');if(go){loadEx(go.dataset.go);return;}
+  if(e.target.id==='exWorksheet'){openLoxSheet();return;}
   if(e.target.id==='exGuide'){startGuide(x,null);return;}
   if(e.target.id==='gExit2'){endGuide();return;}
   if(e.target.id==='missionNext'){nextGuide();return;}
@@ -1476,6 +1497,7 @@ $('#exLoad').onclick=()=>{
 };
 $('#exSel').onchange=syncPracticeControls;
 $('#examSel').onchange=syncPracticeControls;
+$('#lxPractice').onclick=()=>loadEx('g:loxDir');
 
 /* ---------- Bucle de animación ---------- */
 let lastTs=0;
@@ -1497,7 +1519,8 @@ if(['misiones','examenes','practica'].includes(entry)){
   $('#panel').hidden=false;showTab('ejercicios');
   setLearningTab(entry==='misiones'?'misiones':'practica');
   if(entry!=='misiones')setPracticeMode(entry==='examenes'?'examen':'libre');
-}else if(entry==='barco'){$('#panel').hidden=true;setTool('barco');}
+}else if(entry==='loxodromica'){loadEx('f:'+FIX.findIndex(f=>f[1]==='loxDir'));}
+else if(entry==='barco'){$('#panel').hidden=true;setTool('barco');}
 new ResizeObserver(resize).observe(stage);resize();
 // The mobile notebook leaves the header and bottom tool rail available.
 const layoutObserver=new ResizeObserver(()=>{

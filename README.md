@@ -10,6 +10,7 @@ Práctica interactiva de navegación sobre la carta L105 para preparar Patrón d
 - Preguntas de dos convocatorias oficiales de 2026.
 - Ejercicios aleatorios y ejemplos para practicar por temas.
 - Útiles de carta, calculadoras y un barco con viento y corriente.
+- Loxodrómica directa e inversa con hoja de trabajo, calculadora DEG y comprobación por pasos.
 
 La beta guarda el progreso en el navegador de cada persona. No requiere registro ni sincroniza datos entre dispositivos.
 
@@ -40,3 +41,13 @@ Abre un [issue](https://github.com/telmo-beemine/carta-estrecho/issues) indicand
 Consulta [LEEME.md](LEEME.md) para más información sobre la estructura y los enlaces directos.
 
 Proyecto educativo. Carta de enseñanza, no válida para la navegación.
+
+## Loxodrómica
+
+Abre [la hoja de loxodrómica](https://telmo-beemine.github.io/carta-estrecho/carta/index.html#loxodromica) o selecciona un tema de cálculo en Práctica libre. Las preguntas analíticas de los exámenes también la abren automáticamente.
+
+La hoja usa el método aproximado de latitud media: separa apartamiento en millas de diferencias de latitud y longitud en minutos. Sus coordenadas se introducen completas, con grados, minutos y hemisferio. El método de esta práctica no admite cruces del ecuador o los polos; esos recorridos requieren otro tratamiento. La hoja mantiene los trazados existentes y el borrador mientras alternas con la carta o respondes a la pregunta activa.
+
+### Pruebas
+
+Con Node.js instalado, ejecuta `node --test tests/*.test.cjs`. Incluyen los cuatro ejercicios analíticos oficiales, cuadrantes, hemisferios, navegación por paralelos y meridianos, validación de respuestas, calculadora sin evaluación de JavaScript y los tres generadores de práctica.

@@ -28,6 +28,7 @@ Usa un servidor HTTP para probar la carta: la máscara de tierra se lee mediante
 - `carta/index.html#misiones`: recorrido de 13 misiones.
 - `carta/index.html#examenes`: convocatorias oficiales.
 - `carta/index.html#practica`: ejercicios aleatorios y ejemplos.
+- `carta/index.html#loxodromica`: hoja de cálculo de loxodrómica.
 - `carta/index.html#barco`: carta con el útil Barco seleccionado.
 
 Los enlaces abren el espacio correspondiente; no inician una misión ni eliminan trazados automáticamente. El nombre del proyecto en la cabecera de la carta vuelve a la portada.

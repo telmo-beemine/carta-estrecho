@@ -241,3 +241,5 @@ figcaption { margin-top: 12px; text-align: center; font-size: 10px; color: var(-
 @media (prefers-reduced-motion: no-preference) {
   .button, .text-link, button { transition: background-color .15s, color .15s, border-color .15s; }
 }
+
+.tool-notes .text-link { margin-top: 16px; }
